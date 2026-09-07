@@ -6,7 +6,7 @@
 
 | Area | Status | Evidence / Catatan |
 |---|---|---|
-| Nama produk `ManGApp` / binary `mangap` | Implemented | `Cargo.toml`, `src/main.rs`, `README.md` |
+| Nama produk `MangApp` / binary `mangap` | Implemented | `Cargo.toml`, `src/main.rs`, `README.md` |
 | Halaman Sources | Implemented | `src/ui.rs`, `tests/ui_contract.rs` |
 | Source enabled sebelum `DISABLED` | Implemented | `src/ui.rs`, test ordering UI |
 | Panel PATH dan urutan resolve sistem | Implemented | `src/detect.rs`, `src/ui.rs` |
@@ -17,7 +17,7 @@
 
 ## Goal
 
-Membuat aplikasi terminal `mangap` (ManGApp / Manage Grouped Applications) berbasis Rust + Ratatui yang pada tahap pertama menampilkan katalog sumber instalasi yang didukung di macOS. Semua sumber yang didukung selalu terlihat; sumber yang executable-nya tidak tersedia di sistem ditampilkan sebagai `DISABLED` dengan gaya visual redup.
+Membuat aplikasi terminal `mangap` (MangApp / Manage Applications) berbasis Rust + Ratatui yang dibuat khusus untuk MacBook dan pada tahap pertama menampilkan katalog sumber instalasi yang didukung. Semua sumber yang didukung selalu terlihat; sumber yang executable-nya tidak tersedia di sistem ditampilkan sebagai `DISABLED` dengan gaya visual redup.
 
 Tahap ini hanya mencakup halaman Sources. Pengambilan dan tampilan daftar aplikasi dari masing-masing sumber menjadi tahap berikutnya.
 
@@ -145,7 +145,7 @@ Script yang tidak diawali `list_`—termasuk `cleanup.sh` dan `update.sh`—teta
 ## Acceptance criteria
 
 1. `[Implemented]` `cargo test` lulus.
-2. `[Implemented]` `cargo run` membuka aplikasi bernama `ManGApp` (`mangap`) dan menampilkan halaman Sources.
+2. `[Implemented]` `cargo run` membuka aplikasi bernama `MangApp` (`mangap`) dan menampilkan halaman Sources di MacBook.
 3. `[Implemented]` Semua sumber dalam katalog terlihat, termasuk yang tidak terpasang.
 4. `[Implemented]` Sumber yang tidak tersedia terlihat disabled dan tidak disalahartikan sebagai error.
 5. `[Implemented]` Refresh dan exit tidak meninggalkan terminal dalam mode alternate/raw.

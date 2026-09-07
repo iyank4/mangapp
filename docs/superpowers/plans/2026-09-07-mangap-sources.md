@@ -1,10 +1,10 @@
-# ManGApp Sources Implementation Plan
+# MangApp Sources Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
 > **Current status:** Tasks 1–7 below are `Implemented`. The checkboxes preserve the original execution breakdown; the status tables in this document are the current source of truth.
 
-**Goal:** Membuat aplikasi Rust + Ratatui bernama `mangap` (ManGApp / Manage Grouped Applications) yang menampilkan sumber instalasi, aplikasi yang dikelola oleh setiap source, dan penggunaan storage per aplikasi melalui UI terminal yang konsisten.
+**Goal:** Membuat aplikasi Rust + Ratatui bernama `mangap` (MangApp / Manage Applications) yang dibuat khusus untuk MacBook dan menampilkan sumber instalasi, aplikasi yang dikelola oleh setiap source, serta penggunaan storage per aplikasi melalui UI terminal yang konsisten.
 
 **Architecture:** `mangap` memakai katalog sumber compiled-in, resolver command yang dapat diuji, model snapshot status, dan UI Ratatui yang dipisahkan dari lifecycle terminal. Binary hanya mengatur probing awal, refresh, alternate screen, raw mode, dan event loop; registry, detector, model, dan rendering berada di library agar dapat diuji tanpa terminal nyata.
 
@@ -16,7 +16,7 @@
 
 | Workstream | Status | Evidence |
 |---|---|---|
-| ManGApp naming dan `mangap` package/binary | Implemented | `Cargo.toml`, `src/main.rs`, `README.md` |
+| MangApp naming dan `mangap` package/binary | Implemented | `Cargo.toml`, `src/main.rs`, `README.md` |
 | Sources page dan source registry | Implemented | `src/registry.rs`, `src/ui.rs` |
 | Source status, grouping enabled sebelum `DISABLED`, dan nomor urut | Implemented | `src/model.rs`, `src/ui.rs`, `tests/ui_contract.rs` |
 | PATH listing dengan urutan resolve sistem | Implemented | `src/detect.rs`, `src/ui.rs`, `tests/detect_contract.rs` |
@@ -28,7 +28,7 @@
 
 ## Bukti Validasi Terakhir
 
-Pada rename terakhir ke ManGApp, repository telah melewati:
+Pada rename terakhir ke MangApp, repository telah melewati:
 
 - `cargo fmt --all -- --check` — lulus.
 - `cargo test --all-targets` — 26 test lulus.
@@ -43,7 +43,7 @@ Pada rename terakhir ke ManGApp, repository telah melewati:
 | Penghapusan script `list_*` lama setelah pengganti solid | Implemented | `526a4aa` |
 | PATH panel, scrolling, focus row, source hint, dan kolom note | Implemented | `7e0ebc1`, `17e8ca0`, `87a2e7c` |
 | Pengurutan enabled sebelum `DISABLED` dan nomor urut | Implemented | `f97de67`, `9e11e8d`, `8d21ac7` |
-| Rename menjadi ManGApp / `mangap` | Implemented | `e096e8d`, `82c0da5` |
+| Rename menjadi MangApp / `mangap` | Implemented | `e096e8d`, `82c0da5` |
 | Daftar aplikasi dari source | Planned | Menunggu tahap berikutnya |
 | Deteksi dan ringkasan storage | Planned | Menunggu model aplikasi |
 
@@ -266,7 +266,7 @@ Pada rename terakhir ke ManGApp, repository telah melewati:
 
 - [x] **Step 3: Implement the UI**
 
-  Render the title `MangApp — Sources`, an alphabetic table, a detail panel, and a footer with keyboard help. Use green for available rows, dark gray for disabled rows, and yellow/red for error rows. Keep disabled rows visible but skip them when moving the active selection. Render missing data as `—` and status-specific explanatory text. Keep layout bounds safe for small terminals by calculating widths from `Rect` and never writing outside the frame.
+  Render the title `MangApp — Sources`, an alphabetic table, a detail panel, and a footer with keyboard help. Use green for available rows, dark gray for disabled rows, and yellow/red for error rows. Keep disabled rows visible but skip them when moving the active selection. Render missing data as `—` and status-specific explanatory text. Keep layout bounds safe for small terminals by calculating widths from `Rect` and never writing outside the frame. The supported platform is MacBook with macOS.
 
 - [x] **Step 4: Run tests and verify GREEN**
 
