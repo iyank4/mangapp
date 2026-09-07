@@ -229,6 +229,7 @@ pub fn render(frame: &mut Frame, app: &App) {
     frame.render_widget(title, areas[0]);
 
     let header = Row::new([
+        Cell::from("No."),
         Cell::from("Status"),
         Cell::from("Sumber"),
         Cell::from("Command"),
@@ -237,11 +238,12 @@ pub fn render(frame: &mut Frame, app: &App) {
     ])
     .style(Style::default().add_modifier(Modifier::BOLD));
 
-    let rows = app.sources().iter().map(|snapshot| {
+    let rows = app.sources().iter().enumerate().map(|(index, snapshot)| {
         let status = status_label(&snapshot.status);
         let candidates = snapshot.definition.candidates.join(" / ");
         let note = status_note(&snapshot.status);
         Row::new([
+            Cell::from(format!("{:02}", index + 1)),
             Cell::from(status),
             Cell::from(snapshot.definition.name),
             Cell::from(candidates),
@@ -254,6 +256,7 @@ pub fn render(frame: &mut Frame, app: &App) {
     let table = Table::new(
         rows,
         [
+            Constraint::Length(4),
             Constraint::Length(10),
             Constraint::Length(18),
             Constraint::Length(24),

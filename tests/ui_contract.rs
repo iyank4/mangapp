@@ -114,6 +114,9 @@ fn sources_page_renders_headers_rows_and_disabled_status() {
         .map(|cell| cell.symbol())
         .collect();
     assert!(content.contains("manapp — Sources"));
+    assert!(content.contains("No."));
+    assert!(content.contains("01"));
+    assert!(content.contains("17"));
     assert!(content.contains("Status"));
     assert!(content.contains("Sumber"));
     assert!(content.contains("Command"));
