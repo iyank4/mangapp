@@ -1,3 +1,5 @@
+use std::path::{Path, PathBuf};
+
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     Frame,
@@ -7,6 +9,7 @@ use ratatui::{
     widgets::{Block, Borders, Cell, Paragraph, Row, Table, TableState},
 };
 
+use crate::detect::path_entries_from_environment;
 use crate::model::{SourceSnapshot, SourceStatus, status_label};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -18,13 +21,19 @@ pub enum AppAction {
 
 pub struct App {
     sources: Vec<SourceSnapshot>,
+    path_entries: Vec<PathBuf>,
     selectable_indices: Vec<usize>,
     selected_position: Option<usize>,
     detail_visible: bool,
+    path_visible: bool,
 }
 
 impl App {
     pub fn new(sources: Vec<SourceSnapshot>) -> Self {
+        Self::with_path_entries(sources, path_entries_from_environment())
+    }
+
+    pub fn with_path_entries(sources: Vec<SourceSnapshot>, path_entries: Vec<PathBuf>) -> Self {
         let selectable_indices = sources
             .iter()
             .enumerate()
@@ -37,9 +46,11 @@ impl App {
 
         Self {
             sources,
+            path_entries,
             selectable_indices,
             selected_position,
             detail_visible: false,
+            path_visible: false,
         }
     }
 
@@ -56,6 +67,14 @@ impl App {
         self.detail_visible
     }
 
+    pub fn path_entries(&self) -> &[PathBuf] {
+        &self.path_entries
+    }
+
+    pub fn path_visible(&self) -> bool {
+        self.path_visible
+    }
+
     pub fn replace_sources(&mut self, sources: Vec<SourceSnapshot>) {
         *self = Self::new(sources);
     }
@@ -64,6 +83,10 @@ impl App {
         match key.code {
             KeyCode::Char('q') | KeyCode::Char('Q') | KeyCode::Esc => AppAction::Quit,
             KeyCode::Char('r') | KeyCode::Char('R') => AppAction::Refresh,
+            KeyCode::Char('p') | KeyCode::Char('P') => {
+                self.path_visible = !self.path_visible;
+                AppAction::None
+            }
             KeyCode::Enter => {
                 self.detail_visible = !self.detail_visible;
                 AppAction::None
@@ -104,12 +127,21 @@ impl App {
 
 pub fn render(frame: &mut Frame, app: &App) {
     let detail_height = if app.detail_visible() { 5 } else { 3 };
+    let path_height = if app.path_visible() {
+        let fixed_height = 2 + detail_height + 1 + 1;
+        let available = frame.area().height.saturating_sub(fixed_height);
+        let desired = app.path_entries().len().saturating_add(2) as u16;
+        desired.min(available.saturating_sub(5)).max(1)
+    } else {
+        1
+    };
     let areas = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(2),
             Constraint::Min(5),
             Constraint::Length(detail_height),
+            Constraint::Length(path_height),
             Constraint::Length(1),
         ])
         .split(frame.area());
@@ -176,12 +208,80 @@ pub fn render(frame: &mut Frame, app: &App) {
         areas[2],
     );
 
+    if app.path_visible() {
+        let lines = if app.path_entries().is_empty() {
+            vec![Line::from("(PATH kosong)")]
+        } else {
+            app.path_entries()
+                .iter()
+                .enumerate()
+                .map(|(index, path)| {
+                    let annotation = path_annotation(path, app.path_entries());
+                    Line::from(Span::styled(
+                        format!("{:02}. {}{}", index + 1, display_path(path), annotation),
+                        path_style(path, app.path_entries()),
+                    ))
+                })
+                .collect()
+        };
+        frame.render_widget(
+            Paragraph::new(lines).block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" PATH directories "),
+            ),
+            areas[3],
+        );
+    } else {
+        frame.render_widget(
+            Paragraph::new("PATH directories: hidden (p untuk tampilkan)")
+                .style(Style::default().fg(Color::DarkGray)),
+            areas[3],
+        );
+    }
+
     frame.render_widget(
         Paragraph::new(
             "↑/↓ j/k navigasi  PgUp/PgDn halaman  Enter detail  r refresh  q/Esc keluar",
         ),
-        areas[3],
+        areas[4],
     );
+}
+
+fn display_path(path: &Path) -> String {
+    if path.as_os_str().is_empty() {
+        "(current directory)".into()
+    } else {
+        path.to_string_lossy().into_owned()
+    }
+}
+
+fn path_is_duplicate(path: &Path, paths: &[PathBuf]) -> bool {
+    paths
+        .iter()
+        .filter(|candidate| candidate.as_path() == path)
+        .count()
+        > 1
+}
+
+fn path_style(path: &Path, paths: &[PathBuf]) -> Style {
+    if !path.is_dir() {
+        Style::default().fg(Color::Red)
+    } else if path_is_duplicate(path, paths) {
+        Style::default().fg(Color::Yellow)
+    } else {
+        Style::default()
+    }
+}
+
+fn path_annotation(path: &Path, paths: &[PathBuf]) -> &'static str {
+    if !path.is_dir() {
+        " [ERROR: folder tidak ada]"
+    } else if path_is_duplicate(path, paths) {
+        " [WARNING: duplikat]"
+    } else {
+        ""
+    }
 }
 
 fn status_style(status: &SourceStatus) -> Style {

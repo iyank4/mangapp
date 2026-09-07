@@ -4,7 +4,7 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use manapp::model::{SourceSnapshot, SourceStatus};
 use manapp::registry::source_registry;
 use manapp::ui::{App, AppAction, render};
-use ratatui::{Terminal, backend::TestBackend};
+use ratatui::{Terminal, backend::TestBackend, style::Color};
 
 fn snapshots() -> Vec<SourceSnapshot> {
     source_registry()
@@ -29,6 +29,14 @@ fn snapshots() -> Vec<SourceSnapshot> {
             },
         })
         .collect()
+}
+
+fn path_entries() -> Vec<PathBuf> {
+    vec![
+        PathBuf::from("/first/bin"),
+        PathBuf::from("/second/bin"),
+        PathBuf::from("/first/bin"),
+    ]
 }
 
 fn key(code: KeyCode) -> KeyEvent {
@@ -187,4 +195,93 @@ fn sources_page_renders_disabled_detail_message_without_selection() {
         .map(|cell| cell.symbol())
         .collect();
     assert!(content.contains("Sumber disabled tetap ditampilkan"));
+}
+
+#[test]
+fn path_section_is_hidden_by_default_below_detail() {
+    let app = App::with_path_entries(snapshots(), path_entries());
+    assert!(!app.path_visible());
+
+    let backend = TestBackend::new(120, 30);
+    let mut terminal = Terminal::new(backend).expect("test terminal");
+    terminal
+        .draw(|frame| render(frame, &app))
+        .expect("render hidden path section");
+    let content: String = terminal
+        .backend()
+        .buffer()
+        .content()
+        .iter()
+        .map(|cell| cell.symbol())
+        .collect();
+
+    assert!(content.contains("PATH directories: hidden"));
+    assert!(!content.contains("/first/bin"));
+}
+
+#[test]
+fn path_section_toggles_below_detail_and_preserves_path_order() {
+    let mut app = App::with_path_entries(snapshots(), path_entries());
+    app.handle_key(key(KeyCode::Char('p')));
+    assert!(app.path_visible());
+
+    let backend = TestBackend::new(120, 30);
+    let mut terminal = Terminal::new(backend).expect("test terminal");
+    terminal
+        .draw(|frame| render(frame, &app))
+        .expect("render visible path section");
+    let content: String = terminal
+        .backend()
+        .buffer()
+        .content()
+        .iter()
+        .map(|cell| cell.symbol())
+        .collect();
+
+    let first = content.find("01. /first/bin").expect("first path entry");
+    let second = content.find("02. /second/bin").expect("second path entry");
+    let duplicate = content
+        .find("03. /first/bin")
+        .expect("duplicate path entry");
+    assert!(first < second && second < duplicate);
+    assert!(content.contains("PATH directories"));
+}
+
+#[test]
+fn path_section_marks_duplicates_as_warning_and_missing_folders_as_error() {
+    let mut app = App::with_path_entries(
+        snapshots(),
+        vec![
+            PathBuf::from("/tmp"),
+            PathBuf::from("/tmp"),
+            PathBuf::from("/path/that/does/not/exist"),
+        ],
+    );
+    app.handle_key(key(KeyCode::Char('p')));
+
+    let backend = TestBackend::new(120, 30);
+    let mut terminal = Terminal::new(backend).expect("test terminal");
+    terminal
+        .draw(|frame| render(frame, &app))
+        .expect("render path statuses");
+    let buffer = terminal.backend().buffer();
+
+    let find_cell_style = |needle: &str| {
+        for y in 0..buffer.area().height {
+            let row: String = (0..buffer.area().width)
+                .map(|x| buffer.cell((x, y)).expect("buffer cell").symbol())
+                .collect();
+            if let Some(x) = row.find(needle) {
+                return buffer.cell((x as u16, y)).expect("path cell").style().fg;
+            }
+        }
+        panic!("missing rendered path: {needle}");
+    };
+
+    assert_eq!(find_cell_style("01. /tmp"), Some(Color::Yellow));
+    assert_eq!(find_cell_style("02. /tmp"), Some(Color::Yellow));
+    assert_eq!(
+        find_cell_style("03. /path/that/does/not/exist"),
+        Some(Color::Red)
+    );
 }

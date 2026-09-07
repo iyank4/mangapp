@@ -6,7 +6,7 @@ use crossterm::{
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use manapp::{
-    detect::{PathResolver, detect_source},
+    detect::{PathResolver, detect_source, path_entries_from_environment},
     registry::source_registry,
     ui::{App, AppAction, render},
 };
@@ -37,7 +37,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     execute!(stdout, EnterAlternateScreen)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
-    let mut app = App::new(collect_sources());
+    let mut app = App::with_path_entries(collect_sources(), path_entries_from_environment());
 
     loop {
         terminal.draw(|frame| render(frame, &app))?;

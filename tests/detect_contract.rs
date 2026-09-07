@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use manapp::detect::{CommandResolver, PathResolver, detect_source};
+use manapp::detect::{CommandResolver, PathResolver, detect_source, path_entries};
 use manapp::model::SourceStatus;
 use manapp::registry::source_registry;
 
@@ -91,4 +91,18 @@ fn path_resolver_finds_only_executable_files_and_rejects_empty_names() {
     let _environment_resolver = PathResolver::from_environment();
 
     fs::remove_dir_all(directory).expect("remove detector fixture");
+}
+
+#[test]
+fn path_entries_preserve_read_order_and_duplicates() {
+    let entries = path_entries(std::ffi::OsStr::new("/first:/second:/first"));
+
+    assert_eq!(
+        entries,
+        vec![
+            PathBuf::from("/first"),
+            PathBuf::from("/second"),
+            PathBuf::from("/first"),
+        ]
+    );
 }

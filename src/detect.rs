@@ -1,4 +1,4 @@
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 
 use crate::model::{SourceDefinition, SourceSnapshot, SourceStatus};
@@ -20,6 +20,14 @@ impl PathResolver {
     pub fn from_environment() -> Self {
         Self::new(std::env::var_os("PATH").unwrap_or_default())
     }
+}
+
+pub fn path_entries(path: &OsStr) -> Vec<PathBuf> {
+    std::env::split_paths(path).collect()
+}
+
+pub fn path_entries_from_environment() -> Vec<PathBuf> {
+    path_entries(&std::env::var_os("PATH").unwrap_or_default())
 }
 
 impl CommandResolver for PathResolver {
