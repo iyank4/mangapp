@@ -31,27 +31,27 @@ Navigasi minimum:
 - `r`: menjalankan deteksi ulang.
 - `q` atau `Esc`: keluar.
 
-Katalog sumber awal:
+Katalog sumber awal, diurutkan berdasarkan nama sumber secara alfabetis:
 
 | Sumber | Command kandidat | Kategori |
 |---|---|---|
-| Homebrew | `brew` | System package manager |
-| Mac App Store | `mas` | App store |
-| npm | `npm` | JavaScript package manager |
-| Python pip | `pip3`, `pip`, `python3 -m pip` | Python package manager |
-| uv | `uv` | Python tool manager |
-| pipx | `pipx` | Python application manager |
-| RubyGems | `gem` | Ruby package manager |
 | Cargo | `cargo` | Rust package manager |
-| Go | `go` | Go toolchain |
+| Composer | `composer` | PHP package manager |
+| Conda | `conda`, `mamba` | Environment/package manager |
 | Dart | `dart` | Dart/Flutter toolchain |
 | Flutter | `flutter` | Dart/Flutter toolchain |
+| Go | `go` | Go toolchain |
+| Homebrew | `brew` | System package manager |
+| Mac App Store | `mas` | App store |
 | MacPorts | `port` | System package manager |
 | Nix | `nix` | System package manager |
-| Conda | `conda`, `mamba` | Environment/package manager |
+| npm | `npm` | JavaScript package manager |
+| pipx | `pipx` | Python application manager |
 | pnpm | `pnpm` | JavaScript package manager |
+| Python pip | `pip3`, `pip`, `python3 -m pip` | Python package manager |
+| RubyGems | `gem` | Ruby package manager |
+| uv | `uv` | Python tool manager |
 | Yarn | `yarn` | JavaScript package manager |
-| Composer | `composer` | PHP package manager |
 
 Katalog bersifat compiled-in dan menjadi satu sumber kebenaran untuk nama, command, kategori, serta urutan tampilan. Menambahkan sumber baru harus cukup dengan menambahkan definisi katalog dan test deteksinya.
 
