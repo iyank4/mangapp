@@ -280,8 +280,18 @@ fn path_section_renders_source_hint_column_and_leaves_unknown_hint_blank() {
     assert!(buffer_text(buffer).contains("SOURCE HINT"));
     assert!(buffer_text(buffer).contains("NOTE / CATATAN"));
     assert!(buffer_text(buffer).contains("~/.profile"));
+    let path_header_row = row_containing(buffer, "SOURCE HINT");
+    let path_header_text: String = (0..buffer.area().width)
+        .map(|x| {
+            buffer
+                .cell((x, path_header_row))
+                .expect("buffer cell")
+                .symbol()
+        })
+        .collect();
+    assert!(path_header_text.contains("No."));
 
-    let unknown_row = row_containing(buffer, "02. /unknown/bin");
+    let unknown_row = row_containing(buffer, "/unknown/bin");
     let unknown_text: String = (0..buffer.area().width)
         .map(|x| buffer.cell((x, unknown_row)).expect("buffer cell").symbol())
         .collect();
@@ -307,11 +317,9 @@ fn path_section_toggles_below_detail_and_preserves_path_order() {
         .map(|cell| cell.symbol())
         .collect();
 
-    let first = content.find("01. /first/bin").expect("first path entry");
-    let second = content.find("02. /second/bin").expect("second path entry");
-    let duplicate = content
-        .find("03. /first/bin")
-        .expect("duplicate path entry");
+    let first = content.find("/first/bin").expect("first path entry");
+    let second = content.find("/second/bin").expect("second path entry");
+    let duplicate = content.rfind("/first/bin").expect("duplicate path entry");
     assert!(first < second && second < duplicate);
     assert!(content.contains("PATH directories"));
 }
@@ -372,7 +380,7 @@ fn path_section_is_capped_at_half_height_and_scrollable() {
     let path_title_row = row_containing(buffer, "PATH directories");
     let footer_row = row_containing(buffer, "↑/↓ j/k navigasi");
     assert_eq!(footer_row - path_title_row, 15);
-    assert!(!buffer_text(buffer).contains("20. /path/20"));
+    assert!(!buffer_text(buffer).contains("/path/20"));
 
     for _ in 0..20 {
         app.handle_key(key(KeyCode::Down));
@@ -385,7 +393,7 @@ fn path_section_is_capped_at_half_height_and_scrollable() {
     terminal
         .draw(|frame| render(frame, &app))
         .expect("render scrolled path page");
-    assert!(buffer_text(terminal.backend().buffer()).contains("21. /path/21"));
+    assert!(buffer_text(terminal.backend().buffer()).contains("/path/21"));
 }
 
 #[test]
@@ -452,12 +460,12 @@ fn path_section_highlights_the_focused_row() {
     let first_buffer = terminal.backend().buffer();
     assert!(row_has_modifier(
         first_buffer,
-        "01. /path/01",
+        "/path/01",
         Modifier::REVERSED
     ));
     assert!(!row_has_modifier(
         first_buffer,
-        "02. /path/02",
+        "/path/02",
         Modifier::REVERSED
     ));
 
@@ -468,12 +476,12 @@ fn path_section_highlights_the_focused_row() {
     let second_buffer = terminal.backend().buffer();
     assert!(!row_has_modifier(
         second_buffer,
-        "01. /path/01",
+        "/path/01",
         Modifier::REVERSED
     ));
     assert!(row_has_modifier(
         second_buffer,
-        "02. /path/02",
+        "/path/02",
         Modifier::REVERSED
     ));
 }

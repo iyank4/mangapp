@@ -306,6 +306,7 @@ pub fn render(frame: &mut Frame, app: &App) {
     if app.path_visible() {
         let rows = if app.path_entries().is_empty() {
             vec![Row::new([
+                Cell::from(""),
                 Cell::from("(PATH kosong)"),
                 Cell::from(""),
                 Cell::from(""),
@@ -321,7 +322,8 @@ pub fn render(frame: &mut Frame, app: &App) {
                         .and_then(Option::as_deref)
                         .unwrap_or_default();
                     Row::new([
-                        Cell::from(format!("{:02}. {}", index + 1, display_path(path))),
+                        Cell::from(format!("{:02}", index + 1)),
+                        Cell::from(display_path(path)),
                         Cell::from(hint),
                         Cell::from(path_note(path, app.path_entries()))
                             .style(path_note_style(path, app.path_entries())),
@@ -339,6 +341,7 @@ pub fn render(frame: &mut Frame, app: &App) {
         let path_table = Table::new(
             rows,
             [
+                Constraint::Length(4),
                 Constraint::Min(30),
                 Constraint::Length(28),
                 Constraint::Length(26),
@@ -346,6 +349,7 @@ pub fn render(frame: &mut Frame, app: &App) {
         )
         .header(
             Row::new([
+                Cell::from("No."),
                 Cell::from("PATH"),
                 Cell::from("SOURCE HINT"),
                 Cell::from("NOTE / CATATAN"),
