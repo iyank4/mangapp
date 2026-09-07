@@ -103,7 +103,7 @@ impl App {
 }
 
 pub fn render(frame: &mut Frame, app: &App) {
-    let detail_height = if app.detail_visible() { 5 } else { 1 };
+    let detail_height = if app.detail_visible() { 5 } else { 3 };
     let areas = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
