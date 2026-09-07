@@ -1,8 +1,22 @@
-# MangApp (Manage Application)
+# ManGApp — Manage Grouped Applications
 
-`mangap` adalah aplikasi terminal MangApp (Manage Application) untuk melihat sumber instalasi aplikasi dan package manager yang umum digunakan di macOS. Aplikasi ini dibuat dengan Rust, Ratatui, dan Crossterm.
+`mangap` adalah aplikasi terminal ManGApp (Manage Grouped Applications) untuk developer macOS. Aplikasi ini membantu melihat sumber instalasi dan, pada tahap berikutnya, aplikasi yang dikelola oleh setiap sumber beserta penggunaan storage-nya. Aplikasi ini dibuat dengan Rust, Ratatui, dan Crossterm.
 
-Tahap saat ini hanya menyediakan halaman **Sources**. Semua sumber yang didukung selalu ditampilkan dan diurutkan berdasarkan nama secara alfabetis. Sumber yang command-nya tidak tersedia di sistem tetap terlihat sebagai `DISABLED`, sehingga user dapat membedakan antara sumber yang tidak terpasang dan sumber yang tidak didukung.
+## Status Fitur
+
+| Fitur | Status |
+| --- | --- |
+| Nama produk ManGApp dan binary `mangap` | Implemented |
+| Halaman Sources dengan sumber yang didukung | Implemented |
+| Source `AVAILABLE`, `ERROR`, dan `DISABLED` | Implemented |
+| Pengurutan source enabled sebelum `DISABLED` | Implemented |
+| Panel PATH dengan urutan resolve sistem | Implemented |
+| Source hint, duplicate warning, dan missing-path error | Implemented |
+| Daftar aplikasi dari setiap source | Planned |
+| Kolom aplikasi yang konsisten lintas source | Planned |
+| Deteksi penggunaan storage per aplikasi | Planned |
+
+Semua source yang didukung selalu ditampilkan. Source yang command-nya tidak tersedia di sistem tetap terlihat sebagai `DISABLED`, sehingga user dapat membedakan antara source yang tidak terpasang dan source yang tidak didukung.
 
 Tabel Sources memiliki kolom `No.` untuk nomor urut visual. Sumber yang enabled ditampilkan lebih dulu, lalu sumber `DISABLED`; masing-masing kelompok tetap diurutkan secara alfabetis.
 
@@ -67,6 +81,11 @@ Kontrol keyboard:
 Section `PATH directories` berada di bawah Detail, default hidden, dan mempertahankan urutan resolve yang diberikan sistem melalui environment variable `PATH`, termasuk duplikat; path tidak diurutkan alfabetis. Daftarnya memiliki kolom `No.`, `PATH`, `SOURCE HINT`, dan `NOTE / CATATAN`. Kolom `SOURCE HINT` diisi jika path dapat dicocokkan dengan `/etc/paths`, `/etc/paths.d/*`, atau path literal pada file shell user; selain itu dibiarkan kosong. Kolom `NOTE / CATATAN` berisi `Warning: path duplikat` atau `Error: folder tidak ada` jika relevan. `Tab` akan membukanya saat fokus berpindah dari Sources; section aktif diberi label `[FOCUS]`, dan row PATH aktif diberi reverse highlight. Tingginya dibatasi maksimal 50% tinggi terminal dan dapat di-scroll dengan `↑`/`↓` atau `j`/`k` saat fokus berada di section PATH; viewport mengikuti row aktif.
 
 ## How to develop
+
+Rencana detail, keputusan desain, dan status pengerjaan tersedia di:
+
+- [Design dan status fitur](docs/superpowers/specs/2026-09-07-mangap-sources-design.md)
+- [Implementation plan dan progress](docs/superpowers/plans/2026-09-07-mangap-sources.md)
 
 ### Struktur kode
 
