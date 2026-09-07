@@ -62,7 +62,7 @@ Kontrol keyboard:
 - `r`: deteksi ulang sumber
 - `q` atau `Esc`: keluar
 
-Section `PATH directories` berada di bawah Detail, default hidden, dan mempertahankan urutan pembacaan environment variable `PATH`, termasuk duplikat. `Tab` akan membukanya saat fokus berpindah dari Sources; section aktif diberi label `[FOCUS]`. Tingginya dibatasi maksimal 50% tinggi terminal dan dapat di-scroll dengan `↑`/`↓` atau `j`/`k` saat fokus berada di section PATH. Path duplikat ditandai warning kuning, sedangkan path yang tidak ada atau bukan folder ditandai error merah.
+Section `PATH directories` berada di bawah Detail, default hidden, dan mempertahankan urutan pembacaan environment variable `PATH`, termasuk duplikat. `Tab` akan membukanya saat fokus berpindah dari Sources; section aktif diberi label `[FOCUS]`, dan row PATH aktif diberi reverse highlight. Tingginya dibatasi maksimal 50% tinggi terminal dan dapat di-scroll dengan `↑`/`↓` atau `j`/`k` saat fokus berada di section PATH; viewport mengikuti row aktif. Path duplikat ditandai warning kuning, sedangkan path yang tidak ada atau bukan folder ditandai error merah.
 
 ## How to develop
 
