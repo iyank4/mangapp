@@ -2,9 +2,22 @@
 
 **Date:** 2026-09-07
 
+## Status Implementasi
+
+| Area | Status | Evidence / Catatan |
+|---|---|---|
+| Nama produk `ManGApp` / binary `mangap` | Implemented | `Cargo.toml`, `src/main.rs`, `README.md` |
+| Halaman Sources | Implemented | `src/ui.rs`, `tests/ui_contract.rs` |
+| Source enabled sebelum `DISABLED` | Implemented | `src/ui.rs`, test ordering UI |
+| Panel PATH dan urutan resolve sistem | Implemented | `src/detect.rs`, `src/ui.rs` |
+| Source hint dan catatan error/warning PATH | Implemented | `src/detect.rs`, `src/ui.rs` |
+| Daftar aplikasi dari setiap source | Planned | Belum ada collector atau halaman aplikasi |
+| Kolom aplikasi konsisten lintas source | Planned | Menunggu desain kontrak data aplikasi |
+| Deteksi storage per aplikasi | Planned | Menunggu daftar aplikasi dan strategi pengukuran |
+
 ## Goal
 
-Membuat aplikasi terminal `mangap` (MangApp / Manage Application) berbasis Rust + Ratatui yang pada tahap pertama menampilkan katalog sumber instalasi yang didukung di macOS. Semua sumber yang didukung selalu terlihat; sumber yang executable-nya tidak tersedia di sistem ditampilkan sebagai `DISABLED` dengan gaya visual redup.
+Membuat aplikasi terminal `mangap` (ManGApp / Manage Grouped Applications) berbasis Rust + Ratatui yang pada tahap pertama menampilkan katalog sumber instalasi yang didukung di macOS. Semua sumber yang didukung selalu terlihat; sumber yang executable-nya tidak tersedia di sistem ditampilkan sebagai `DISABLED` dengan gaya visual redup.
 
 Tahap ini hanya mencakup halaman Sources. Pengambilan dan tampilan daftar aplikasi dari masing-masing sumber menjadi tahap berikutnya.
 
@@ -12,8 +25,8 @@ Tahap ini hanya mencakup halaman Sources. Pengambilan dan tampilan daftar aplika
 
 Halaman Sources menampilkan tabel dengan kolom tetap:
 
-| Status | Sumber | Command | Kategori | Keterangan |
-|---|---|---|---|---|
+| No. | Status | Sumber | Command | Kategori | Keterangan |
+|---|---|---|---|---|---|
 
 Status yang digunakan:
 
@@ -29,9 +42,13 @@ Navigasi minimum:
 - `PageUp`/`PageDown`: menggulir halaman.
 - `Enter`: menampilkan detail sumber.
 - `r`: menjalankan deteksi ulang.
+- `Tab`: berpindah fokus antara Sources dan PATH.
+- `p`: menampilkan atau menyembunyikan PATH.
 - `q` atau `Esc`: keluar.
 
-Katalog sumber awal, diurutkan berdasarkan nama sumber secara alfabetis:
+Panel PATH berada di bawah Detail dan default hidden. Panel ini memiliki kolom `No.`, `PATH`, `SOURCE HINT`, dan `NOTE / CATATAN`. Nomor dan urutan entry mengikuti hasil resolve sistem dari environment variable `PATH`, termasuk duplikat; entry tidak diurutkan alfabetis. `SOURCE HINT` diisi hanya jika dapat dicocokkan dengan file konfigurasi yang diketahui; jika tidak, kolom dibiarkan kosong. Note menampilkan warning untuk duplikat dan error untuk folder yang tidak ada. Panel dibatasi maksimal 50% tinggi terminal, dapat di-scroll dengan `↑`/`↓` atau `j`/`k`, dan row aktif diberi highlight.
+
+Katalog sumber awal disimpan dalam registry berdasarkan nama sumber secara alfabetis. Pada UI, source enabled ditampilkan lebih dulu, kemudian `DISABLED`; masing-masing kelompok tetap alfabetis:
 
 | Sumber | Command kandidat | Kategori |
 |---|---|---|
@@ -64,7 +81,8 @@ Komponen utama:
 - `SourceSnapshot`: definisi sumber ditambah hasil deteksi dan pesan pengguna.
 - `source_registry`: daftar semua `SourceDefinition` dalam urutan UI.
 - `detector`: mencari command kandidat pada `PATH` tanpa menjalankan shell melalui string yang dievaluasi.
-- `ui`: state halaman, layout tabel, warna, scrolling, input keyboard, dan panel detail.
+- `path source hint`: mencocokkan entry PATH dengan `/etc/paths`, `/etc/paths.d/*`, dan path literal pada file shell user tanpa mengeksekusi file tersebut.
+- `ui`: state halaman, layout tabel, warna, scrolling, input keyboard, panel detail, dan panel PATH.
 - `main`: menjalankan pemeriksaan awal, membuka terminal alternate screen, dan memulai event loop.
 
 Deteksi pertama dilakukan sebelum layar dibuka agar UI tidak menerima kondisi setengah terisi. Tombol `r` menjalankan deteksi ulang lalu mengganti snapshot secara atomik. Deteksi hanya memeriksa keberadaan executable pada tahap ini; collector daftar aplikasi tidak termasuk scope.
@@ -86,7 +104,7 @@ Kode menggunakan Rust standard library untuk pencarian `PATH` dan error handling
 
 ## Testing
 
-Test unit akan memverifikasi:
+Test yang tersedia memverifikasi:
 
 - katalog selalu memuat seluruh sumber yang didukung dalam urutan yang stabil;
 - setiap definisi memiliki nama, command kandidat, dan kategori non-kosong;
@@ -94,6 +112,10 @@ Test unit akan memverifikasi:
 - command yang tidak ditemukan menghasilkan `Disabled`;
 - kegagalan probe menghasilkan `Error`, bukan `Disabled`;
 - status dan pesan untuk `Available`, `Disabled`, dan `Error` berbeda.
+- source enabled ditampilkan sebelum `DISABLED`;
+- nomor urut Sources dan PATH ditampilkan;
+- PATH mempertahankan urutan resolve, menampilkan source hint, serta memisahkan note error/warning;
+- panel PATH dapat di-scroll dan row aktif mendapat highlight.
 
 Test UI/integrasi akan memverifikasi:
 
@@ -101,6 +123,8 @@ Test UI/integrasi akan memverifikasi:
 - sumber yang tidak tersedia tetap terlihat dan memakai status disabled;
 - keyboard `r` menjalankan refresh;
 - keyboard `q` keluar dengan terminal bersih.
+
+Bukti validasi terakhir: `cargo test --all-targets` lulus dengan 26 test, Clippy lulus tanpa warning, format check lulus, dan line coverage mencapai 89,35%.
 
 ## Migration and scope
 
@@ -120,9 +144,18 @@ Script yang tidak diawali `list_`—termasuk `cleanup.sh` dan `update.sh`—teta
 
 ## Acceptance criteria
 
-1. `cargo test` lulus.
-2. `cargo run` membuka aplikasi bernama `MangApp` (`mangap`) dan menampilkan halaman Sources.
-3. Semua sumber dalam katalog terlihat, termasuk yang tidak terpasang.
-4. Sumber yang tidak tersedia terlihat disabled dan tidak disalahartikan sebagai error.
-5. Refresh dan exit tidak meninggalkan terminal dalam mode alternate/raw.
-6. Seluruh script `list_*` dan test lamanya sudah dihapus setelah implementasi dinyatakan solid.
+1. `[Implemented]` `cargo test` lulus.
+2. `[Implemented]` `cargo run` membuka aplikasi bernama `ManGApp` (`mangap`) dan menampilkan halaman Sources.
+3. `[Implemented]` Semua sumber dalam katalog terlihat, termasuk yang tidak terpasang.
+4. `[Implemented]` Sumber yang tidak tersedia terlihat disabled dan tidak disalahartikan sebagai error.
+5. `[Implemented]` Refresh dan exit tidak meninggalkan terminal dalam mode alternate/raw.
+6. `[Implemented]` Seluruh script `list_*` dan test lamanya sudah dihapus setelah implementasi dinyatakan solid.
+
+## Gaps dan Rencana Berikutnya
+
+| Tahap | Status | Rencana |
+|---|---|---|
+| Sources page | Implemented | Pertahankan sebagai baseline stabil sebelum menambah halaman baru. |
+| Application inventory | Planned | Tambahkan adapter collector per source dan halaman daftar aplikasi. |
+| Unified application table | Planned | Tetapkan kontrak kolom bersama; data yang tidak tersedia diberi flag/warna. |
+| Storage inspection | Planned | Tambahkan pengukuran storage per aplikasi dengan status unavailable jika source tidak mendukung. |
