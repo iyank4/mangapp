@@ -4,7 +4,7 @@
 
 Tahap saat ini hanya menyediakan halaman **Sources**. Semua sumber yang didukung selalu ditampilkan dan diurutkan berdasarkan nama secara alfabetis. Sumber yang command-nya tidak tersedia di sistem tetap terlihat sebagai `DISABLED`, sehingga user dapat membedakan antara sumber yang tidak terpasang dan sumber yang tidak didukung.
 
-Tabel Sources memiliki kolom `No.` untuk nomor urut sumber sesuai urutan alfabetis.
+Tabel Sources memiliki kolom `No.` untuk nomor urut visual. Sumber yang enabled ditampilkan lebih dulu, lalu sumber `DISABLED`; masing-masing kelompok tetap diurutkan secara alfabetis.
 
 ## Sumber yang didukung
 
