@@ -104,3 +104,87 @@ fn sources_page_renders_headers_rows_and_disabled_status() {
     assert!(content.contains("Cargo"));
     assert!(content.contains("DISABLED"));
 }
+
+#[test]
+fn app_supports_home_end_replace_and_ignores_unknown_keys() {
+    let mut app = App::new(snapshots());
+
+    assert_eq!(app.handle_key(key(KeyCode::Char('x'))), AppAction::None);
+    app.handle_key(key(KeyCode::End));
+    assert_eq!(app.selected_index(), Some(16));
+    app.handle_key(key(KeyCode::Home));
+    assert_eq!(app.selected_index(), Some(0));
+
+    app.replace_sources(Vec::new());
+    assert_eq!(app.selected_index(), None);
+    assert_eq!(app.handle_key(key(KeyCode::End)), AppAction::None);
+}
+
+#[test]
+fn sources_page_renders_detail_and_error_styles() {
+    let mut sources = snapshots();
+    sources[1].status = SourceStatus::Error {
+        message: "probe gagal".into(),
+    };
+    let mut app = App::new(sources);
+    app.handle_key(key(KeyCode::Enter));
+
+    let backend = TestBackend::new(120, 30);
+    let mut terminal = Terminal::new(backend).expect("test terminal");
+    terminal
+        .draw(|frame| render(frame, &app))
+        .expect("render detail");
+    let content: String = terminal
+        .backend()
+        .buffer()
+        .content()
+        .iter()
+        .map(|cell| cell.symbol())
+        .collect();
+    assert!(content.contains("executable: /usr/local/bin/cargo"));
+
+    app.handle_key(key(KeyCode::Down));
+    terminal
+        .draw(|frame| render(frame, &app))
+        .expect("render error detail");
+    let error_content: String = terminal
+        .backend()
+        .buffer()
+        .content()
+        .iter()
+        .map(|cell| cell.symbol())
+        .collect();
+    assert!(error_content.contains("ERROR"));
+    assert!(error_content.contains("probe gagal"));
+}
+
+#[test]
+fn sources_page_renders_disabled_detail_message_without_selection() {
+    let sources = source_registry()
+        .iter()
+        .map(|definition| SourceSnapshot {
+            definition,
+            status: SourceStatus::Disabled {
+                candidates: definition
+                    .candidates
+                    .iter()
+                    .map(|candidate| (*candidate).to_string())
+                    .collect(),
+            },
+        })
+        .collect();
+    let app = App::new(sources);
+    let backend = TestBackend::new(120, 30);
+    let mut terminal = Terminal::new(backend).expect("test terminal");
+    terminal
+        .draw(|frame| render(frame, &app))
+        .expect("render disabled detail");
+    let content: String = terminal
+        .backend()
+        .buffer()
+        .content()
+        .iter()
+        .map(|cell| cell.symbol())
+        .collect();
+    assert!(content.contains("Sumber disabled tetap ditampilkan"));
+}
