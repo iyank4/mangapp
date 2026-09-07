@@ -57,10 +57,11 @@ Kontrol keyboard:
 - `Home`/`End`: ke awal/akhir
 - `Enter`: tampilkan/sembunyikan detail
 - `p`: tampilkan/sembunyikan daftar folder dari `PATH` di bawah Detail
+- `[`/`]`: scroll daftar folder `PATH` saat section terbuka
 - `r`: deteksi ulang sumber
 - `q` atau `Esc`: keluar
 
-Section `PATH directories` mempertahankan urutan pembacaan environment variable `PATH`, termasuk duplikat. Path duplikat ditandai warning kuning, sedangkan path yang tidak ada atau bukan folder ditandai error merah.
+Section `PATH directories` berada di bawah Detail, default hidden, dan mempertahankan urutan pembacaan environment variable `PATH`, termasuk duplikat. Tingginya dibatasi maksimal 50% tinggi terminal dan dapat di-scroll dengan `[`/`]`. Path duplikat ditandai warning kuning, sedangkan path yang tidak ada atau bukan folder ditandai error merah.
 
 ## How to develop
 
