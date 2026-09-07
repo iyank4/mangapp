@@ -124,7 +124,10 @@ impl App {
             KeyCode::Down | KeyCode::Char('j')
                 if self.path_visible && self.focused_section == SectionFocus::Path =>
             {
-                self.path_scroll = self.path_scroll.saturating_add(1);
+                self.path_scroll = self
+                    .path_scroll
+                    .saturating_add(1)
+                    .min(self.path_entries.len().saturating_sub(1));
                 AppAction::None
             }
             KeyCode::Up | KeyCode::Char('k')
@@ -275,7 +278,12 @@ pub fn render(frame: &mut Frame, app: &App) {
     if app.path_visible() {
         let viewport = areas[3].height.saturating_sub(2) as usize;
         let max_scroll = app.path_entries().len().saturating_sub(viewport);
-        let scroll = app.path_scroll().min(max_scroll);
+        let selected_path = app
+            .path_scroll()
+            .min(app.path_entries().len().saturating_sub(1));
+        let scroll = selected_path
+            .saturating_sub(viewport.saturating_sub(1))
+            .min(max_scroll);
         let lines = if app.path_entries().is_empty() {
             vec![Line::from("(PATH kosong)")]
         } else {
@@ -286,9 +294,13 @@ pub fn render(frame: &mut Frame, app: &App) {
                 .take(viewport)
                 .map(|(index, path)| {
                     let annotation = path_annotation(path, app.path_entries());
+                    let mut style = path_style(path, app.path_entries());
+                    if app.focused_section() == SectionFocus::Path && index == selected_path {
+                        style = style.add_modifier(Modifier::REVERSED);
+                    }
                     Line::from(Span::styled(
                         format!("{:02}. {}{}", index + 1, display_path(path), annotation),
-                        path_style(path, app.path_entries()),
+                        style,
                     ))
                 })
                 .collect()

@@ -4,7 +4,11 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use manapp::model::{SourceSnapshot, SourceStatus};
 use manapp::registry::source_registry;
 use manapp::ui::{App, AppAction, SectionFocus, render};
-use ratatui::{Terminal, backend::TestBackend, style::Color};
+use ratatui::{
+    Terminal,
+    backend::TestBackend,
+    style::{Color, Modifier},
+};
 
 fn snapshots() -> Vec<SourceSnapshot> {
     source_registry()
@@ -373,6 +377,45 @@ fn active_section_is_visually_marked() {
     assert!(!content.contains("Sources [FOCUS]"));
 }
 
+#[test]
+fn path_section_highlights_the_focused_row() {
+    let mut app = App::with_path_entries(snapshots(), numbered_path_entries());
+    app.handle_key(key(KeyCode::Tab));
+
+    let backend = TestBackend::new(120, 30);
+    let mut terminal = Terminal::new(backend).expect("test terminal");
+    terminal
+        .draw(|frame| render(frame, &app))
+        .expect("render initial focused path row");
+    let first_buffer = terminal.backend().buffer();
+    assert!(row_has_modifier(
+        first_buffer,
+        "01. /path/01",
+        Modifier::REVERSED
+    ));
+    assert!(!row_has_modifier(
+        first_buffer,
+        "02. /path/02",
+        Modifier::REVERSED
+    ));
+
+    app.handle_key(key(KeyCode::Down));
+    terminal
+        .draw(|frame| render(frame, &app))
+        .expect("render next focused path row");
+    let second_buffer = terminal.backend().buffer();
+    assert!(!row_has_modifier(
+        second_buffer,
+        "01. /path/01",
+        Modifier::REVERSED
+    ));
+    assert!(row_has_modifier(
+        second_buffer,
+        "02. /path/02",
+        Modifier::REVERSED
+    ));
+}
+
 fn buffer_text(buffer: &ratatui::buffer::Buffer) -> String {
     buffer.content().iter().map(|cell| cell.symbol()).collect()
 }
@@ -387,4 +430,17 @@ fn row_containing(buffer: &ratatui::buffer::Buffer, needle: &str) -> u16 {
         }
     }
     panic!("missing rendered text: {needle}");
+}
+
+fn row_has_modifier(buffer: &ratatui::buffer::Buffer, needle: &str, modifier: Modifier) -> bool {
+    let row = row_containing(buffer, needle);
+    let row_text: String = (0..buffer.area().width)
+        .map(|x| buffer.cell((x, row)).expect("buffer cell").symbol())
+        .collect();
+    let x = row_text.find(needle).expect("path row start") as u16;
+    buffer
+        .cell((x, row))
+        .expect("path cell")
+        .style()
+        .has_modifier(modifier)
 }
