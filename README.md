@@ -2,6 +2,10 @@
 
 `mangap` adalah aplikasi terminal MangApp (Manage Applications) yang dibuat khusus untuk MacBook. Aplikasi ini membantu melihat sumber instalasi dan, pada tahap berikutnya, aplikasi yang dikelola oleh setiap sumber beserta penggunaan storage-nya. Aplikasi ini dibuat dengan Rust, Ratatui, dan Crossterm.
 
+## Preview
+
+![MangApp Sources](docs/images/mangapp-sources.png)
+
 ## Status Fitur
 
 | Fitur | Status |
