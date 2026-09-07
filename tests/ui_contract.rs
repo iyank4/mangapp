@@ -53,19 +53,24 @@ fn key(code: KeyCode) -> KeyEvent {
     KeyEvent::new(code, KeyModifiers::NONE)
 }
 
+fn selected_source_name(app: &App) -> Option<&'static str> {
+    app.selected_index()
+        .map(|index| app.sources()[index].definition.name)
+}
+
 #[test]
 fn app_navigates_enabled_rows_and_handles_actions() {
     let mut app = App::new(snapshots());
     assert_eq!(app.selected_index(), Some(0));
 
     app.handle_key(key(KeyCode::Down));
-    assert_eq!(app.selected_index(), Some(6));
+    assert_eq!(selected_source_name(&app), Some("Homebrew"));
     app.handle_key(key(KeyCode::Up));
-    assert_eq!(app.selected_index(), Some(0));
+    assert_eq!(selected_source_name(&app), Some("Cargo"));
     app.handle_key(key(KeyCode::PageDown));
-    assert_eq!(app.selected_index(), Some(16));
+    assert_eq!(selected_source_name(&app), Some("Yarn"));
     app.handle_key(key(KeyCode::PageUp));
-    assert_eq!(app.selected_index(), Some(0));
+    assert_eq!(selected_source_name(&app), Some("Cargo"));
 
     assert_eq!(app.handle_key(key(KeyCode::Enter)), AppAction::None);
     assert!(app.detail_visible());
@@ -94,6 +99,31 @@ fn app_has_no_selection_when_all_sources_are_disabled() {
     assert_eq!(app.selected_index(), None);
     app.handle_key(key(KeyCode::Down));
     assert_eq!(app.selected_index(), None);
+}
+
+#[test]
+fn app_orders_enabled_sources_before_disabled_sources() {
+    let app = App::new(snapshots());
+    let mut disabled_seen = false;
+
+    for snapshot in app.sources() {
+        let is_disabled = matches!(snapshot.status, SourceStatus::Disabled { .. });
+        if is_disabled {
+            disabled_seen = true;
+        } else {
+            assert!(
+                !disabled_seen,
+                "enabled source appeared after disabled source"
+            );
+        }
+    }
+
+    let names = app
+        .sources()
+        .iter()
+        .map(|snapshot| snapshot.definition.name)
+        .collect::<Vec<_>>();
+    assert_eq!(&names[..3], &["Cargo", "Homebrew", "Yarn"]);
 }
 
 #[test]
@@ -132,9 +162,9 @@ fn app_supports_home_end_replace_and_ignores_unknown_keys() {
 
     assert_eq!(app.handle_key(key(KeyCode::Char('x'))), AppAction::None);
     app.handle_key(key(KeyCode::End));
-    assert_eq!(app.selected_index(), Some(16));
+    assert_eq!(selected_source_name(&app), Some("Yarn"));
     app.handle_key(key(KeyCode::Home));
-    assert_eq!(app.selected_index(), Some(0));
+    assert_eq!(selected_source_name(&app), Some("Cargo"));
 
     app.replace_sources(Vec::new());
     assert_eq!(app.selected_index(), None);

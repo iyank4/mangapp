@@ -54,6 +54,14 @@ impl App {
     ) -> Self {
         path_source_hints.resize(path_entries.len(), None);
         path_source_hints.truncate(path_entries.len());
+        let mut sources = sources;
+        sources.sort_by(|left, right| {
+            let left_disabled = matches!(left.status, SourceStatus::Disabled { .. });
+            let right_disabled = matches!(right.status, SourceStatus::Disabled { .. });
+            left_disabled
+                .cmp(&right_disabled)
+                .then_with(|| left.definition.name.cmp(right.definition.name))
+        });
         let selectable_indices = sources
             .iter()
             .enumerate()
