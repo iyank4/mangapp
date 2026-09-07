@@ -39,6 +39,12 @@ fn path_entries() -> Vec<PathBuf> {
     ]
 }
 
+fn numbered_path_entries() -> Vec<PathBuf> {
+    (1..=40)
+        .map(|index| PathBuf::from(format!("/path/{index:02}")))
+        .collect()
+}
+
 fn key(code: KeyCode) -> KeyEvent {
     KeyEvent::new(code, KeyModifiers::NONE)
 }
@@ -284,4 +290,50 @@ fn path_section_marks_duplicates_as_warning_and_missing_folders_as_error() {
         find_cell_style("03. /path/that/does/not/exist"),
         Some(Color::Red)
     );
+}
+
+#[test]
+fn path_section_is_capped_at_half_height_and_scrollable() {
+    let mut app = App::with_path_entries(snapshots(), numbered_path_entries());
+    app.handle_key(key(KeyCode::Char('p')));
+
+    let backend = TestBackend::new(120, 30);
+    let mut terminal = Terminal::new(backend).expect("test terminal");
+    terminal
+        .draw(|frame| render(frame, &app))
+        .expect("render initial path page");
+    let buffer = terminal.backend().buffer();
+    let path_title_row = row_containing(buffer, "PATH directories");
+    let footer_row = row_containing(buffer, "↑/↓ j/k navigasi");
+    assert_eq!(footer_row - path_title_row, 15);
+    assert!(!buffer_text(buffer).contains("20. /path/20"));
+
+    for _ in 0..20 {
+        app.handle_key(key(KeyCode::Char(']')));
+    }
+    assert_eq!(app.path_scroll(), 20);
+    app.handle_key(key(KeyCode::Char('[')));
+    assert_eq!(app.path_scroll(), 19);
+    app.handle_key(key(KeyCode::Char(']')));
+
+    terminal
+        .draw(|frame| render(frame, &app))
+        .expect("render scrolled path page");
+    assert!(buffer_text(terminal.backend().buffer()).contains("21. /path/21"));
+}
+
+fn buffer_text(buffer: &ratatui::buffer::Buffer) -> String {
+    buffer.content().iter().map(|cell| cell.symbol()).collect()
+}
+
+fn row_containing(buffer: &ratatui::buffer::Buffer, needle: &str) -> u16 {
+    for y in 0..buffer.area().height {
+        let row: String = (0..buffer.area().width)
+            .map(|x| buffer.cell((x, y)).expect("buffer cell").symbol())
+            .collect();
+        if row.contains(needle) {
+            return y;
+        }
+    }
+    panic!("missing rendered text: {needle}");
 }

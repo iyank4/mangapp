@@ -26,6 +26,7 @@ pub struct App {
     selected_position: Option<usize>,
     detail_visible: bool,
     path_visible: bool,
+    path_scroll: usize,
 }
 
 impl App {
@@ -51,6 +52,7 @@ impl App {
             selected_position,
             detail_visible: false,
             path_visible: false,
+            path_scroll: 0,
         }
     }
 
@@ -75,6 +77,10 @@ impl App {
         self.path_visible
     }
 
+    pub fn path_scroll(&self) -> usize {
+        self.path_scroll
+    }
+
     pub fn replace_sources(&mut self, sources: Vec<SourceSnapshot>) {
         *self = Self::new(sources);
     }
@@ -85,6 +91,17 @@ impl App {
             KeyCode::Char('r') | KeyCode::Char('R') => AppAction::Refresh,
             KeyCode::Char('p') | KeyCode::Char('P') => {
                 self.path_visible = !self.path_visible;
+                if !self.path_visible {
+                    self.path_scroll = 0;
+                }
+                AppAction::None
+            }
+            KeyCode::Char('[') if self.path_visible => {
+                self.path_scroll = self.path_scroll.saturating_sub(1);
+                AppAction::None
+            }
+            KeyCode::Char(']') if self.path_visible => {
+                self.path_scroll = self.path_scroll.saturating_add(1);
                 AppAction::None
             }
             KeyCode::Enter => {
@@ -127,14 +144,12 @@ impl App {
 
 pub fn render(frame: &mut Frame, app: &App) {
     let detail_height = if app.detail_visible() { 5 } else { 3 };
-    let path_height = if app.path_visible() {
-        let fixed_height = 2 + detail_height + 1 + 1;
-        let available = frame.area().height.saturating_sub(fixed_height);
-        let desired = app.path_entries().len().saturating_add(2) as u16;
-        desired.min(available.saturating_sub(5)).max(1)
-    } else {
-        1
-    };
+    let path_height = path_panel_height(
+        frame.area().height,
+        detail_height,
+        app.path_entries().len(),
+        app.path_visible(),
+    );
     let areas = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -209,12 +224,17 @@ pub fn render(frame: &mut Frame, app: &App) {
     );
 
     if app.path_visible() {
+        let viewport = areas[3].height.saturating_sub(2) as usize;
+        let max_scroll = app.path_entries().len().saturating_sub(viewport);
+        let scroll = app.path_scroll().min(max_scroll);
         let lines = if app.path_entries().is_empty() {
             vec![Line::from("(PATH kosong)")]
         } else {
             app.path_entries()
                 .iter()
                 .enumerate()
+                .skip(scroll)
+                .take(viewport)
                 .map(|(index, path)| {
                     let annotation = path_annotation(path, app.path_entries());
                     Line::from(Span::styled(
@@ -242,10 +262,27 @@ pub fn render(frame: &mut Frame, app: &App) {
 
     frame.render_widget(
         Paragraph::new(
-            "↑/↓ j/k navigasi  PgUp/PgDn halaman  Enter detail  r refresh  q/Esc keluar",
+            "↑/↓ j/k navigasi  PgUp/PgDn halaman  Enter detail  p PATH  [/]: scroll PATH  r refresh  q/Esc keluar",
         ),
         areas[4],
     );
+}
+
+fn path_panel_height(
+    screen_height: u16,
+    detail_height: u16,
+    path_count: usize,
+    visible: bool,
+) -> u16 {
+    if !visible {
+        return 1;
+    }
+
+    let fixed_height = 2 + detail_height + 1 + 1;
+    let available = screen_height.saturating_sub(fixed_height);
+    let desired = path_count.saturating_add(2).max(3) as u16;
+    let table_minimum = available.saturating_sub(5);
+    desired.min(screen_height / 2).min(table_minimum).max(1)
 }
 
 fn display_path(path: &Path) -> String {
