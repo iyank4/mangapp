@@ -1,18 +1,18 @@
-# manapp Sources Implementation Plan
+# MangApp Sources Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Membuat aplikasi Rust + Ratatui bernama `manapp` yang menampilkan halaman Sources secara alfabetis, dengan status `AVAILABLE`, `DISABLED`, atau `ERROR`, serta mencapai coverage minimal 80% untuk kode library.
+**Goal:** Membuat aplikasi Rust + Ratatui bernama `mangap` (MangApp / Manage Application) yang menampilkan halaman Sources secara alfabetis, dengan status `AVAILABLE`, `DISABLED`, atau `ERROR`, serta mencapai coverage minimal 80% untuk kode library.
 
-**Architecture:** `manapp` memakai katalog sumber compiled-in, resolver command yang dapat diuji, model snapshot status, dan UI Ratatui yang dipisahkan dari lifecycle terminal. Binary hanya mengatur probing awal, refresh, alternate screen, raw mode, dan event loop; registry, detector, model, dan rendering berada di library agar dapat diuji tanpa terminal nyata.
+**Architecture:** `mangap` memakai katalog sumber compiled-in, resolver command yang dapat diuji, model snapshot status, dan UI Ratatui yang dipisahkan dari lifecycle terminal. Binary hanya mengatur probing awal, refresh, alternate screen, raw mode, dan event loop; registry, detector, model, dan rendering berada di library agar dapat diuji tanpa terminal nyata.
 
 **Tech Stack:** Rust 2024, Ratatui 0.30.2, Crossterm 0.29, Cargo test, Ratatui `TestBackend`, dan `cargo-llvm-cov` untuk pengukuran coverage.
 
-**Spec:** `docs/superpowers/specs/2026-09-07-manapp-sources-design.md`
+**Spec:** `docs/superpowers/specs/2026-09-07-mangap-sources-design.md`
 
 ## Global Constraints
 
-- Nama package dan binary harus `manapp`.
+- Nama package dan binary harus `mangap`.
 - Tahap ini hanya mengimplementasikan halaman Sources; daftar aplikasi belum termasuk.
 - Katalog selalu menampilkan semua sumber yang didukung dalam urutan alfabetis berdasarkan nama case-insensitive.
 - Sumber yang command-nya tidak ditemukan harus terlihat sebagai `DISABLED`, bukan dihilangkan.
@@ -36,10 +36,10 @@
 
 - [ ] **Step 1: Create Cargo manifest and failing contract tests**
 
-  `Cargo.toml` harus mendefinisikan package `manapp`, edition `2024`, dependencies `ratatui = "0.30.2"` dan `crossterm = "0.29"`, serta library target default dari `src/lib.rs`. Test awal di `tests/model_contract.rs` harus menguji bahwa status dapat dibedakan:
+  `Cargo.toml` harus mendefinisikan package `mangap`, edition `2024`, dependencies `ratatui = "0.30.2"` dan `crossterm = "0.29"`, serta library target default dari `src/lib.rs`. Test awal di `tests/model_contract.rs` harus menguji bahwa status dapat dibedakan:
 
   ```rust
-  use manapp::model::{SourceStatus, status_label};
+  use mangap::model::{SourceStatus, status_label};
 
   #[test]
   fn status_labels_distinguish_available_disabled_and_error() {
@@ -53,7 +53,7 @@
 
   Run: `cargo test --test model_contract`
 
-  Expected: compilation fails because `manapp::model` and its types/functions do not exist yet.
+  Expected: compilation fails because `mangap::model` and its types/functions do not exist yet.
 
 - [ ] **Step 3: Implement the minimal model**
 
@@ -94,7 +94,7 @@
 
   ```bash
   git add Cargo.toml Cargo.lock src/lib.rs src/model.rs tests/model_contract.rs
-  git commit -m "feat: scaffold manapp source model"
+  git commit -m "feat: scaffold mangap source model"
   ```
 
 ### Task 2: Add the alphabetic source registry
@@ -113,7 +113,7 @@
   Test that the registry contains exactly the 17 catalog entries from the spec and that the names are sorted case-insensitively:
 
   ```rust
-  use manapp::registry::source_registry;
+  use mangap::registry::source_registry;
 
   #[test]
   fn registry_contains_supported_sources_in_alphabetic_order() {
@@ -153,7 +153,7 @@
 
   ```bash
   git add src/lib.rs src/registry.rs tests/registry_contract.rs
-  git commit -m "feat: add alphabetic manapp source registry"
+  git commit -m "feat: add alphabetic mangap source registry"
   ```
 
 ### Task 3: Implement a testable command detector
@@ -229,7 +229,7 @@
 
 - [ ] **Step 3: Implement the UI**
 
-  Render the title `manapp — Sources`, an alphabetic table, a detail panel, and a footer with keyboard help. Use green for available rows, dark gray for disabled rows, and yellow/red for error rows. Keep disabled rows visible but skip them when moving the active selection. Render missing data as `—` and status-specific explanatory text. Keep layout bounds safe for small terminals by calculating widths from `Rect` and never writing outside the frame.
+  Render the title `MangApp — Sources`, an alphabetic table, a detail panel, and a footer with keyboard help. Use green for available rows, dark gray for disabled rows, and yellow/red for error rows. Keep disabled rows visible but skip them when moving the active selection. Render missing data as `—` and status-specific explanatory text. Keep layout bounds safe for small terminals by calculating widths from `Rect` and never writing outside the frame.
 
 - [ ] **Step 4: Run tests and verify GREEN**
 
@@ -241,7 +241,7 @@
 
   ```bash
   git add src/lib.rs src/ui.rs tests/ui_contract.rs
-  git commit -m "feat: render manapp sources page"
+  git commit -m "feat: render mangap sources page"
   ```
 
 ### Task 5: Add the binary lifecycle and manual terminal smoke test
@@ -253,11 +253,11 @@
 
 **Interfaces:**
 - Consumes: registry, detector, `App`, and renderer.
-- Produces: executable `manapp` and clean terminal lifecycle.
+- Produces: executable `mangap` and clean terminal lifecycle.
 
 - [ ] **Step 1: Write failing CLI contract test**
 
-  Add a test that verifies the Cargo package exposes a binary named `manapp`; add a unit-level lifecycle test around the terminal guard where practical. Keep all terminal I/O behind a small function so the rest of the behavior remains testable.
+  Add a test that verifies the Cargo package exposes a binary named `mangap`; add a unit-level lifecycle test around the terminal guard where practical. Keep all terminal I/O behind a small function so the rest of the behavior remains testable.
 
 - [ ] **Step 2: Run tests and verify RED**
 
@@ -286,7 +286,7 @@
 
   ```bash
   git add Cargo.toml Cargo.lock src/main.rs tests/cli_contract.rs
-  git commit -m "feat: add manapp sources executable"
+  git commit -m "feat: add mangap sources executable"
   ```
 
 ### Task 6: Reach and verify 80% coverage
@@ -328,7 +328,7 @@
 
   ```bash
   git add tests
-  git commit -m "test: raise manapp coverage above eighty percent"
+  git commit -m "test: raise mangap coverage above eighty percent"
   ```
 
 ### Task 7: Remove obsolete list scripts and tests

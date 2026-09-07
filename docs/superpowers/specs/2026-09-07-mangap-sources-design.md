@@ -1,10 +1,10 @@
-# manapp Sources Page Design
+# MangApp Sources Page Design
 
 **Date:** 2026-09-07
 
 ## Goal
 
-Membuat aplikasi terminal `manapp` berbasis Rust + Ratatui yang pada tahap pertama menampilkan katalog sumber instalasi yang didukung di macOS. Semua sumber yang didukung selalu terlihat; sumber yang executable-nya tidak tersedia di sistem ditampilkan sebagai `DISABLED` dengan gaya visual redup.
+Membuat aplikasi terminal `mangap` (MangApp / Manage Application) berbasis Rust + Ratatui yang pada tahap pertama menampilkan katalog sumber instalasi yang didukung di macOS. Semua sumber yang didukung selalu terlihat; sumber yang executable-nya tidak tersedia di sistem ditampilkan sebagai `DISABLED` dengan gaya visual redup.
 
 Tahap ini hanya mencakup halaman Sources. Pengambilan dan tampilan daftar aplikasi dari masing-masing sumber menjadi tahap berikutnya.
 
@@ -18,7 +18,7 @@ Halaman Sources menampilkan tabel dengan kolom tetap:
 Status yang digunakan:
 
 - `AVAILABLE`: minimal satu executable kandidat ditemukan pada `PATH`.
-- `DISABLED`: tidak ada executable kandidat yang ditemukan; baris tetap ditampilkan sebagai bukti dukungan `manapp`.
+- `DISABLED`: tidak ada executable kandidat yang ditemukan; baris tetap ditampilkan sebagai bukti dukungan `mangap`.
 - `ERROR`: executable ditemukan tetapi pemeriksaan sumber gagal; berbeda dari `DISABLED` karena tool sebenarnya ada.
 
 Baris `DISABLED` memakai warna abu-abu dan tidak menjadi pilihan aktif. Baris `ERROR` memakai warna peringatan. Panel detail menampilkan command kandidat, executable yang terdeteksi, dan alasan status.
@@ -104,7 +104,7 @@ Test UI/integrasi akan memverifikasi:
 
 ## Migration and scope
 
-Setelah `manapp` memiliki implementasi Sources dan test yang lulus, file berikut dihapus:
+Setelah `mangap` memiliki implementasi Sources dan test yang lulus, file berikut dihapus:
 
 - `list_homebrew.sh`
 - `list_mas.sh`
@@ -121,7 +121,7 @@ Script yang tidak diawali `list_`—termasuk `cleanup.sh` dan `update.sh`—teta
 ## Acceptance criteria
 
 1. `cargo test` lulus.
-2. `cargo run` membuka aplikasi bernama `manapp` dan menampilkan halaman Sources.
+2. `cargo run` membuka aplikasi bernama `MangApp` (`mangap`) dan menampilkan halaman Sources.
 3. Semua sumber dalam katalog terlihat, termasuk yang tidak terpasang.
 4. Sumber yang tidak tersedia terlihat disabled dan tidak disalahartikan sebagai error.
 5. Refresh dan exit tidak meninggalkan terminal dalam mode alternate/raw.

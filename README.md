@@ -1,6 +1,6 @@
-# manapp
+# MangApp (Manage Application)
 
-`manapp` adalah aplikasi terminal untuk melihat sumber instalasi aplikasi dan package manager yang umum digunakan di macOS. Aplikasi ini dibuat dengan Rust, Ratatui, dan Crossterm.
+`mangap` adalah aplikasi terminal MangApp (Manage Application) untuk melihat sumber instalasi aplikasi dan package manager yang umum digunakan di macOS. Aplikasi ini dibuat dengan Rust, Ratatui, dan Crossterm.
 
 Tahap saat ini hanya menyediakan halaman **Sources**. Semua sumber yang didukung selalu ditampilkan dan diurutkan berdasarkan nama secara alfabetis. Sumber yang command-nya tidak tersedia di sistem tetap terlihat sebagai `DISABLED`, sehingga user dapat membedakan antara sumber yang tidak terpasang dan sumber yang tidak didukung.
 
@@ -29,7 +29,7 @@ Tabel Sources memiliki kolom `No.` untuk nomor urut visual. Sumber yang enabled 
 Status yang ditampilkan:
 
 - `AVAILABLE`: command sumber ditemukan pada `PATH`.
-- `DISABLED`: command sumber tidak ditemukan, tetapi sumber tetap didukung oleh `manapp`.
+- `DISABLED`: command sumber tidak ditemukan, tetapi sumber tetap didukung oleh `MangApp`.
 - `ERROR`: pemeriksaan command mengalami error.
 
 ## Menjalankan
@@ -49,7 +49,7 @@ Build binary release:
 
 ```bash
 cargo build --release
-./target/release/manapp
+./target/release/mangap
 ```
 
 Kontrol keyboard:
