@@ -309,12 +309,12 @@ fn path_section_is_capped_at_half_height_and_scrollable() {
     assert!(!buffer_text(buffer).contains("20. /path/20"));
 
     for _ in 0..20 {
-        app.handle_key(key(KeyCode::Char(']')));
+        app.handle_key(key(KeyCode::Down));
     }
     assert_eq!(app.path_scroll(), 20);
-    app.handle_key(key(KeyCode::Char('[')));
+    app.handle_key(key(KeyCode::Char('k')));
     assert_eq!(app.path_scroll(), 19);
-    app.handle_key(key(KeyCode::Char(']')));
+    app.handle_key(key(KeyCode::Char('j')));
 
     terminal
         .draw(|frame| render(frame, &app))
@@ -341,14 +341,18 @@ fn tab_switches_focus_between_sources_and_path() {
 fn section_focus_routes_section_specific_controls() {
     let mut app = App::with_path_entries(snapshots(), numbered_path_entries());
 
-    app.handle_key(key(KeyCode::Char(']')));
+    app.handle_key(key(KeyCode::Down));
     assert_eq!(app.path_scroll(), 0);
     app.handle_key(key(KeyCode::Enter));
     assert!(app.detail_visible());
 
     app.handle_key(key(KeyCode::Tab));
-    app.handle_key(key(KeyCode::Char(']')));
+    app.handle_key(key(KeyCode::Char('j')));
     assert_eq!(app.path_scroll(), 1);
+    app.handle_key(key(KeyCode::Up));
+    assert_eq!(app.path_scroll(), 0);
+    app.handle_key(key(KeyCode::Char('k')));
+    assert_eq!(app.path_scroll(), 0);
     app.handle_key(key(KeyCode::Enter));
     assert!(app.detail_visible());
 }

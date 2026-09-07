@@ -121,16 +121,16 @@ impl App {
                 }
                 AppAction::None
             }
-            KeyCode::Char('[')
-                if self.path_visible && self.focused_section == SectionFocus::Path =>
-            {
-                self.path_scroll = self.path_scroll.saturating_sub(1);
-                AppAction::None
-            }
-            KeyCode::Char(']')
+            KeyCode::Down | KeyCode::Char('j')
                 if self.path_visible && self.focused_section == SectionFocus::Path =>
             {
                 self.path_scroll = self.path_scroll.saturating_add(1);
+                AppAction::None
+            }
+            KeyCode::Up | KeyCode::Char('k')
+                if self.path_visible && self.focused_section == SectionFocus::Path =>
+            {
+                self.path_scroll = self.path_scroll.saturating_sub(1);
                 AppAction::None
             }
             KeyCode::Enter if self.focused_section == SectionFocus::Sources => {
@@ -318,7 +318,7 @@ pub fn render(frame: &mut Frame, app: &App) {
 
     frame.render_widget(
         Paragraph::new(
-            "↑/↓ j/k navigasi  PgUp/PgDn halaman  Enter detail  p PATH  [/]: scroll PATH  r refresh  q/Esc keluar",
+            "↑/↓ j/k navigasi  PgUp/PgDn halaman  Enter detail  Tab fokus  p PATH  r refresh  q/Esc keluar",
         ),
         areas[4],
     );
