@@ -1,4 +1,4 @@
-use manapp::model::{SourceStatus, status_label};
+use mangap::model::{SourceStatus, status_label};
 
 #[test]
 fn status_labels_distinguish_available_disabled_and_error() {

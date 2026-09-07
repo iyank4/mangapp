@@ -228,7 +228,7 @@ pub fn render(frame: &mut Frame, app: &App) {
         .split(frame.area());
 
     let title = Paragraph::new(Line::from(vec![Span::styled(
-        "manapp — Sources",
+        "MangApp — Sources",
         Style::default()
             .fg(Color::Cyan)
             .add_modifier(Modifier::BOLD),
@@ -296,7 +296,7 @@ pub fn render(frame: &mut Frame, app: &App) {
         .and_then(|index| app.sources().get(index))
         .map(detail_line)
         .unwrap_or_else(|| {
-            "Sumber disabled tetap ditampilkan sebagai dukungan yang tersedia di manapp.".into()
+            "Sumber disabled tetap ditampilkan sebagai dukungan yang tersedia di MangApp.".into()
         });
     frame.render_widget(
         Paragraph::new(detail).block(Block::default().borders(Borders::ALL).title(" Detail ")),

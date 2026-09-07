@@ -1,10 +1,10 @@
 use std::path::PathBuf;
 
-use manapp::detect::{
+use mangap::detect::{
     CommandResolver, PathResolver, detect_source, path_entries, path_source_hints,
 };
-use manapp::model::SourceStatus;
-use manapp::registry::source_registry;
+use mangap::model::SourceStatus;
+use mangap::registry::source_registry;
 
 #[derive(Clone)]
 struct FakeResolver(Result<Option<PathBuf>, String>);
@@ -70,7 +70,7 @@ fn path_resolver_finds_only_executable_files_and_rejects_empty_names() {
         .duration_since(UNIX_EPOCH)
         .expect("clock before epoch")
         .as_nanos();
-    let directory = std::env::temp_dir().join(format!("manapp-detector-{suffix}"));
+    let directory = std::env::temp_dir().join(format!("mangap-detector-{suffix}"));
     fs::create_dir(&directory).expect("create detector fixture");
 
     let executable = directory.join("installed-tool");

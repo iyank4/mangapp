@@ -5,7 +5,7 @@ use crossterm::{
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use manapp::{
+use mangap::{
     detect::{PathResolver, detect_source, path_entries_from_environment},
     registry::source_registry,
     ui::{App, AppAction, render},
@@ -22,7 +22,7 @@ impl Drop for TerminalGuard {
     }
 }
 
-fn collect_sources() -> Vec<manapp::model::SourceSnapshot> {
+fn collect_sources() -> Vec<mangap::model::SourceSnapshot> {
     let resolver = PathResolver::from_environment();
     source_registry()
         .iter()
@@ -60,7 +60,7 @@ fn run() -> Result<(), Box<dyn Error>> {
 
 fn main() {
     if let Err(error) = run() {
-        eprintln!("manapp: {error}");
+        eprintln!("mangap: {error}");
         std::process::exit(1);
     }
 }

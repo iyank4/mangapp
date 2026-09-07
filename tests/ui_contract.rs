@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use manapp::model::{SourceSnapshot, SourceStatus};
-use manapp::registry::source_registry;
-use manapp::ui::{App, AppAction, SectionFocus, render};
+use mangap::model::{SourceSnapshot, SourceStatus};
+use mangap::registry::source_registry;
+use mangap::ui::{App, AppAction, SectionFocus, render};
 use ratatui::{
     Terminal,
     backend::TestBackend,
@@ -143,7 +143,7 @@ fn sources_page_renders_headers_rows_and_disabled_status() {
         .iter()
         .map(|cell| cell.symbol())
         .collect();
-    assert!(content.contains("manapp — Sources"));
+    assert!(content.contains("MangApp — Sources"));
     assert!(content.contains("No."));
     assert!(content.contains("01"));
     assert!(content.contains("17"));

@@ -1,4 +1,4 @@
-use manapp::registry::source_registry;
+use mangap::registry::source_registry;
 
 #[test]
 fn registry_contains_supported_sources_in_alphabetic_order() {
