@@ -88,6 +88,8 @@ Detector tidak menjalankan shell atau mengevaluasi command sebagai string. Detec
 
 ## History dan backlog
 
+- [Dokumentasi MangApp](../README.md)
+- [Kontrak Application Inventory](../reference/application-inventory-contract.md)
 - [History: MangApp Sources](../history/2026-09-07-mangapp-sources.md)
 
 Status repository saat ini:
@@ -97,8 +99,9 @@ Status repository saat ini:
 | Halaman Sources untuk source yang didukung | Implemented |
 | Status `AVAILABLE`, `ERROR`, dan `DISABLED` | Implemented |
 | Panel PATH, source hint, warning duplicate, dan error missing path | Implemented |
+| Kontrak/layout Application Inventory | Documented Only |
 
-Backlog aktif dikelola melalui [GitHub Issues](https://github.com/iyank4/mangapp/issues), sedangkan dokumen ini hanya menjelaskan implementasi dan workflow yang sudah tersedia.
+Backlog aktif dikelola melalui [GitHub Issues](https://github.com/iyank4/mangapp/issues). Kontrak Application Inventory di atas mendokumentasikan target issue #1; collector dan halaman inventory belum diimplementasikan.
 
 ## Prinsip perubahan
 

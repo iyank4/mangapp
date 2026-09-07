@@ -1,6 +1,6 @@
 # History: MangApp Sources
 
-**Tanggal:** 2026-09-07  
+**Tanggal:** 2026-09-07
 **Status:** Archived
 
 Dokumen ini mengarsipkan hasil implementasi tahap pertama MangApp — Manage Applications, aplikasi terminal khusus MacBook dengan macOS.
