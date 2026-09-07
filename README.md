@@ -56,8 +56,11 @@ Kontrol keyboard:
 - `PageUp`/`PageDown` atau `Space`: berpindah halaman
 - `Home`/`End`: ke awal/akhir
 - `Enter`: tampilkan/sembunyikan detail
+- `p`: tampilkan/sembunyikan daftar folder dari `PATH` di bawah Detail
 - `r`: deteksi ulang sumber
 - `q` atau `Esc`: keluar
+
+Section `PATH directories` mempertahankan urutan pembacaan environment variable `PATH`, termasuk duplikat. Path duplikat ditandai warning kuning, sedangkan path yang tidak ada atau bukan folder ditandai error merah.
 
 ## How to develop
 
