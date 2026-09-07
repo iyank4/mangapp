@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 
-use manapp::detect::{CommandResolver, PathResolver, detect_source, path_entries};
+use manapp::detect::{
+    CommandResolver, PathResolver, detect_source, path_entries, path_source_hints,
+};
 use manapp::model::SourceStatus;
 use manapp::registry::source_registry;
 
@@ -105,4 +107,16 @@ fn path_entries_preserve_read_order_and_duplicates() {
             PathBuf::from("/first"),
         ]
     );
+}
+
+#[test]
+fn path_source_hints_match_known_system_path_files_and_leave_unknown_blank() {
+    let hints = path_source_hints(&[
+        PathBuf::from("/usr/bin"),
+        PathBuf::from("/path/without/a/known/source"),
+    ]);
+
+    assert_eq!(hints.len(), 2);
+    assert_eq!(hints[0].as_deref(), Some("/etc/paths"));
+    assert_eq!(hints[1], None);
 }

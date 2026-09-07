@@ -9,7 +9,7 @@ use ratatui::{
     widgets::{Block, Borders, Cell, Paragraph, Row, Table, TableState},
 };
 
-use crate::detect::path_entries_from_environment;
+use crate::detect::{path_entries_from_environment, path_source_hints};
 use crate::model::{SourceSnapshot, SourceStatus, status_label};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -28,6 +28,7 @@ pub enum SectionFocus {
 pub struct App {
     sources: Vec<SourceSnapshot>,
     path_entries: Vec<PathBuf>,
+    path_source_hints: Vec<Option<String>>,
     selectable_indices: Vec<usize>,
     selected_position: Option<usize>,
     detail_visible: bool,
@@ -42,6 +43,17 @@ impl App {
     }
 
     pub fn with_path_entries(sources: Vec<SourceSnapshot>, path_entries: Vec<PathBuf>) -> Self {
+        let path_source_hints = path_source_hints(&path_entries);
+        Self::with_path_entries_and_hints(sources, path_entries, path_source_hints)
+    }
+
+    pub fn with_path_entries_and_hints(
+        sources: Vec<SourceSnapshot>,
+        path_entries: Vec<PathBuf>,
+        mut path_source_hints: Vec<Option<String>>,
+    ) -> Self {
+        path_source_hints.resize(path_entries.len(), None);
+        path_source_hints.truncate(path_entries.len());
         let selectable_indices = sources
             .iter()
             .enumerate()
@@ -55,6 +67,7 @@ impl App {
         Self {
             sources,
             path_entries,
+            path_source_hints,
             selectable_indices,
             selected_position,
             detail_visible: false,
@@ -79,6 +92,10 @@ impl App {
 
     pub fn path_entries(&self) -> &[PathBuf] {
         &self.path_entries
+    }
+
+    pub fn path_source_hints(&self) -> &[Option<String>] {
+        &self.path_source_hints
     }
 
     pub fn path_visible(&self) -> bool {
@@ -276,7 +293,8 @@ pub fn render(frame: &mut Frame, app: &App) {
     );
 
     if app.path_visible() {
-        let viewport = areas[3].height.saturating_sub(2) as usize;
+        let content_height = areas[3].height.saturating_sub(2) as usize;
+        let viewport = content_height.saturating_sub(1);
         let max_scroll = app.path_entries().len().saturating_sub(viewport);
         let selected_path = app
             .path_scroll()
@@ -284,27 +302,47 @@ pub fn render(frame: &mut Frame, app: &App) {
         let scroll = selected_path
             .saturating_sub(viewport.saturating_sub(1))
             .min(max_scroll);
-        let lines = if app.path_entries().is_empty() {
-            vec![Line::from("(PATH kosong)")]
+        let path_width = app
+            .path_entries()
+            .iter()
+            .map(|path| display_path(path).chars().count())
+            .max()
+            .unwrap_or(4);
+        let mut lines = vec![Line::from(Span::styled(
+            format!("    {:<path_width$}  SOURCE HINT", "PATH"),
+            Style::default().add_modifier(Modifier::BOLD),
+        ))];
+        if app.path_entries().is_empty() {
+            lines.push(Line::from("(PATH kosong)"));
         } else {
-            app.path_entries()
-                .iter()
-                .enumerate()
-                .skip(scroll)
-                .take(viewport)
-                .map(|(index, path)| {
-                    let annotation = path_annotation(path, app.path_entries());
-                    let mut style = path_style(path, app.path_entries());
-                    if app.focused_section() == SectionFocus::Path && index == selected_path {
-                        style = style.add_modifier(Modifier::REVERSED);
-                    }
-                    Line::from(Span::styled(
-                        format!("{:02}. {}{}", index + 1, display_path(path), annotation),
-                        style,
-                    ))
-                })
-                .collect()
-        };
+            lines.extend(
+                app.path_entries()
+                    .iter()
+                    .enumerate()
+                    .skip(scroll)
+                    .take(viewport)
+                    .map(|(index, path)| {
+                        let annotation = path_annotation(path, app.path_entries());
+                        let mut style = path_style(path, app.path_entries());
+                        if app.focused_section() == SectionFocus::Path && index == selected_path {
+                            style = style.add_modifier(Modifier::REVERSED);
+                        }
+                        let hint = app
+                            .path_source_hints()
+                            .get(index)
+                            .and_then(Option::as_deref)
+                            .unwrap_or_default();
+                        Line::from(Span::styled(
+                            format!(
+                                "{:02}. {:<path_width$}{annotation}  {hint}",
+                                index + 1,
+                                display_path(path),
+                            ),
+                            style,
+                        ))
+                    }),
+            );
+        }
         frame.render_widget(
             Paragraph::new(lines).block(
                 Block::default()
@@ -358,7 +396,7 @@ fn path_panel_height(
 
     let fixed_height = 2 + detail_height + 1 + 1;
     let available = screen_height.saturating_sub(fixed_height);
-    let desired = path_count.saturating_add(2).max(3) as u16;
+    let desired = path_count.saturating_add(3).max(4) as u16;
     let table_minimum = available.saturating_sub(5);
     desired.min(screen_height / 2).min(table_minimum).max(1)
 }

@@ -230,6 +230,31 @@ fn path_section_is_hidden_by_default_below_detail() {
 }
 
 #[test]
+fn path_section_renders_source_hint_column_and_leaves_unknown_hint_blank() {
+    let mut app = App::with_path_entries_and_hints(
+        snapshots(),
+        vec![PathBuf::from("/known/bin"), PathBuf::from("/unknown/bin")],
+        vec![Some("~/.profile".into()), None],
+    );
+    app.handle_key(key(KeyCode::Tab));
+
+    let backend = TestBackend::new(120, 30);
+    let mut terminal = Terminal::new(backend).expect("test terminal");
+    terminal
+        .draw(|frame| render(frame, &app))
+        .expect("render path source hints");
+    let buffer = terminal.backend().buffer();
+    assert!(buffer_text(buffer).contains("SOURCE HINT"));
+    assert!(buffer_text(buffer).contains("~/.profile"));
+
+    let unknown_row = row_containing(buffer, "02. /unknown/bin");
+    let unknown_text: String = (0..buffer.area().width)
+        .map(|x| buffer.cell((x, unknown_row)).expect("buffer cell").symbol())
+        .collect();
+    assert!(!unknown_text.contains("~/.profile"));
+}
+
+#[test]
 fn path_section_toggles_below_detail_and_preserves_path_order() {
     let mut app = App::with_path_entries(snapshots(), path_entries());
     app.handle_key(key(KeyCode::Char('p')));
