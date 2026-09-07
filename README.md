@@ -48,40 +48,6 @@ Status yang ditampilkan:
 - `DISABLED`: command sumber tidak ditemukan, tetapi sumber tetap didukung oleh `MangApp`.
 - `ERROR`: pemeriksaan command mengalami error.
 
-## Menjalankan
-
-Prasyarat:
-
-- MacBook dengan macOS
-- Rust stable dan Cargo
-
-Jalankan dari root project:
-
-```bash
-cargo run
-```
-
-Build binary release:
-
-```bash
-cargo build --release
-./target/release/mangap
-```
-
-Kontrol keyboard:
-
-- `↑`/`↓` atau `j`/`k`: navigasi
-- `PageUp`/`PageDown` atau `Space`: berpindah halaman
-- `Home`/`End`: ke awal/akhir
-- `Enter`: tampilkan/sembunyikan detail
-- `Tab`: berpindah fokus antara section Sources dan PATH
-- `p`: tampilkan/sembunyikan daftar folder dari `PATH` di bawah Detail dan fokus ke PATH
-- `↑`/`↓` atau `j`/`k`: scroll daftar folder `PATH` saat fokus berada di section PATH
-- `r`: deteksi ulang sumber
-- `q` atau `Esc`: keluar
-
-Section `PATH directories` berada di bawah Detail, default hidden, dan mempertahankan urutan resolve yang diberikan sistem melalui environment variable `PATH`, termasuk duplikat; path tidak diurutkan alfabetis. Daftarnya memiliki kolom `No.`, `PATH`, `SOURCE HINT`, dan `NOTE / CATATAN`. Kolom `SOURCE HINT` diisi jika path dapat dicocokkan dengan `/etc/paths`, `/etc/paths.d/*`, atau path literal pada file shell user; selain itu dibiarkan kosong. Kolom `NOTE / CATATAN` berisi `Warning: path duplikat` atau `Error: folder tidak ada` jika relevan. `Tab` akan membukanya saat fokus berpindah dari Sources; section aktif diberi label `[FOCUS]`, dan row PATH aktif diberi reverse highlight. Tingginya dibatasi maksimal 50% tinggi terminal dan dapat di-scroll dengan `↑`/`↓` atau `j`/`k` saat fokus berada di section PATH; viewport mengikuti row aktif.
-
 ## Development
 
 Panduan struktur kode, workflow validasi, cara menambahkan source, dan status progress tersedia di [Panduan Development](docs/how-to/development.md).
