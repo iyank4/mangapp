@@ -293,71 +293,69 @@ pub fn render(frame: &mut Frame, app: &App) {
     );
 
     if app.path_visible() {
-        let content_height = areas[3].height.saturating_sub(2) as usize;
-        let viewport = content_height.saturating_sub(1);
-        let max_scroll = app.path_entries().len().saturating_sub(viewport);
-        let selected_path = app
-            .path_scroll()
-            .min(app.path_entries().len().saturating_sub(1));
-        let scroll = selected_path
-            .saturating_sub(viewport.saturating_sub(1))
-            .min(max_scroll);
-        let path_width = app
-            .path_entries()
-            .iter()
-            .map(|path| display_path(path).chars().count())
-            .max()
-            .unwrap_or(4);
-        let mut lines = vec![Line::from(Span::styled(
-            format!("    {:<path_width$}  SOURCE HINT", "PATH"),
-            Style::default().add_modifier(Modifier::BOLD),
-        ))];
-        if app.path_entries().is_empty() {
-            lines.push(Line::from("(PATH kosong)"));
+        let rows = if app.path_entries().is_empty() {
+            vec![Row::new([
+                Cell::from("(PATH kosong)"),
+                Cell::from(""),
+                Cell::from(""),
+            ])]
         } else {
-            lines.extend(
-                app.path_entries()
-                    .iter()
-                    .enumerate()
-                    .skip(scroll)
-                    .take(viewport)
-                    .map(|(index, path)| {
-                        let annotation = path_annotation(path, app.path_entries());
-                        let mut style = path_style(path, app.path_entries());
-                        if app.focused_section() == SectionFocus::Path && index == selected_path {
-                            style = style.add_modifier(Modifier::REVERSED);
-                        }
-                        let hint = app
-                            .path_source_hints()
-                            .get(index)
-                            .and_then(Option::as_deref)
-                            .unwrap_or_default();
-                        Line::from(Span::styled(
-                            format!(
-                                "{:02}. {:<path_width$}{annotation}  {hint}",
-                                index + 1,
-                                display_path(path),
-                            ),
-                            style,
-                        ))
-                    }),
-            );
+            app.path_entries()
+                .iter()
+                .enumerate()
+                .map(|(index, path)| {
+                    let hint = app
+                        .path_source_hints()
+                        .get(index)
+                        .and_then(Option::as_deref)
+                        .unwrap_or_default();
+                    Row::new([
+                        Cell::from(format!("{:02}. {}", index + 1, display_path(path))),
+                        Cell::from(hint),
+                        Cell::from(path_note(path, app.path_entries()))
+                            .style(path_note_style(path, app.path_entries())),
+                    ])
+                })
+                .collect()
+        };
+        let mut path_state = TableState::default();
+        if app.focused_section() == SectionFocus::Path && !app.path_entries().is_empty() {
+            path_state.select(Some(
+                app.path_scroll()
+                    .min(app.path_entries().len().saturating_sub(1)),
+            ));
         }
-        frame.render_widget(
-            Paragraph::new(lines).block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_style(section_border_style(
-                        app.focused_section() == SectionFocus::Path,
-                    ))
-                    .title(if app.focused_section() == SectionFocus::Path {
-                        " PATH directories [FOCUS] "
-                    } else {
-                        " PATH directories "
-                    }),
-            ),
-            areas[3],
-        );
+        let path_table = Table::new(
+            rows,
+            [
+                Constraint::Min(30),
+                Constraint::Length(28),
+                Constraint::Length(26),
+            ],
+        )
+        .header(
+            Row::new([
+                Cell::from("PATH"),
+                Cell::from("SOURCE HINT"),
+                Cell::from("NOTE / CATATAN"),
+            ])
+            .style(Style::default().add_modifier(Modifier::BOLD)),
+        )
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(section_border_style(
+                    app.focused_section() == SectionFocus::Path,
+                ))
+                .title(if app.focused_section() == SectionFocus::Path {
+                    " PATH directories [FOCUS] "
+                } else {
+                    " PATH directories "
+                }),
+        )
+        .row_highlight_style(Style::default().add_modifier(Modifier::REVERSED))
+        .highlight_symbol("› ");
+        frame.render_stateful_widget(path_table, areas[3], &mut path_state);
     } else {
         frame.render_widget(
             Paragraph::new("PATH directories: hidden (p untuk tampilkan)")
@@ -417,23 +415,23 @@ fn path_is_duplicate(path: &Path, paths: &[PathBuf]) -> bool {
         > 1
 }
 
-fn path_style(path: &Path, paths: &[PathBuf]) -> Style {
+fn path_note(path: &Path, paths: &[PathBuf]) -> &'static str {
+    if !path.is_dir() {
+        "Error: folder tidak ada"
+    } else if path_is_duplicate(path, paths) {
+        "Warning: path duplikat"
+    } else {
+        ""
+    }
+}
+
+fn path_note_style(path: &Path, paths: &[PathBuf]) -> Style {
     if !path.is_dir() {
         Style::default().fg(Color::Red)
     } else if path_is_duplicate(path, paths) {
         Style::default().fg(Color::Yellow)
     } else {
         Style::default()
-    }
-}
-
-fn path_annotation(path: &Path, paths: &[PathBuf]) -> &'static str {
-    if !path.is_dir() {
-        " [ERROR: folder tidak ada]"
-    } else if path_is_duplicate(path, paths) {
-        " [WARNING: duplikat]"
-    } else {
-        ""
     }
 }
 

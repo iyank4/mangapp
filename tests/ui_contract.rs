@@ -245,6 +245,7 @@ fn path_section_renders_source_hint_column_and_leaves_unknown_hint_blank() {
         .expect("render path source hints");
     let buffer = terminal.backend().buffer();
     assert!(buffer_text(buffer).contains("SOURCE HINT"));
+    assert!(buffer_text(buffer).contains("NOTE / CATATAN"));
     assert!(buffer_text(buffer).contains("~/.profile"));
 
     let unknown_row = row_containing(buffer, "02. /unknown/bin");
@@ -313,12 +314,15 @@ fn path_section_marks_duplicates_as_warning_and_missing_folders_as_error() {
         panic!("missing rendered path: {needle}");
     };
 
-    assert_eq!(find_cell_style("01. /tmp"), Some(Color::Yellow));
-    assert_eq!(find_cell_style("02. /tmp"), Some(Color::Yellow));
     assert_eq!(
-        find_cell_style("03. /path/that/does/not/exist"),
-        Some(Color::Red)
+        find_cell_style("Warning: path duplikat"),
+        Some(Color::Yellow)
     );
+    assert_eq!(
+        find_cell_style("Warning: path duplikat"),
+        Some(Color::Yellow)
+    );
+    assert_eq!(find_cell_style("Error: folder tidak ada"), Some(Color::Red));
 }
 
 #[test]
