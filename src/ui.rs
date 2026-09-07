@@ -19,6 +19,12 @@ pub enum AppAction {
     Quit,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SectionFocus {
+    Sources,
+    Path,
+}
+
 pub struct App {
     sources: Vec<SourceSnapshot>,
     path_entries: Vec<PathBuf>,
@@ -27,6 +33,7 @@ pub struct App {
     detail_visible: bool,
     path_visible: bool,
     path_scroll: usize,
+    focused_section: SectionFocus,
 }
 
 impl App {
@@ -53,6 +60,7 @@ impl App {
             detail_visible: false,
             path_visible: false,
             path_scroll: 0,
+            focused_section: SectionFocus::Sources,
         }
     }
 
@@ -81,6 +89,10 @@ impl App {
         self.path_scroll
     }
 
+    pub fn focused_section(&self) -> SectionFocus {
+        self.focused_section
+    }
+
     pub fn replace_sources(&mut self, sources: Vec<SourceSnapshot>) {
         *self = Self::new(sources);
     }
@@ -89,45 +101,71 @@ impl App {
         match key.code {
             KeyCode::Char('q') | KeyCode::Char('Q') | KeyCode::Esc => AppAction::Quit,
             KeyCode::Char('r') | KeyCode::Char('R') => AppAction::Refresh,
+            KeyCode::Tab => {
+                self.focused_section = match self.focused_section {
+                    SectionFocus::Sources => {
+                        self.path_visible = true;
+                        SectionFocus::Path
+                    }
+                    SectionFocus::Path => SectionFocus::Sources,
+                };
+                AppAction::None
+            }
             KeyCode::Char('p') | KeyCode::Char('P') => {
                 self.path_visible = !self.path_visible;
-                if !self.path_visible {
+                if self.path_visible {
+                    self.focused_section = SectionFocus::Path;
+                } else {
                     self.path_scroll = 0;
+                    self.focused_section = SectionFocus::Sources;
                 }
                 AppAction::None
             }
-            KeyCode::Char('[') if self.path_visible => {
+            KeyCode::Char('[')
+                if self.path_visible && self.focused_section == SectionFocus::Path =>
+            {
                 self.path_scroll = self.path_scroll.saturating_sub(1);
                 AppAction::None
             }
-            KeyCode::Char(']') if self.path_visible => {
+            KeyCode::Char(']')
+                if self.path_visible && self.focused_section == SectionFocus::Path =>
+            {
                 self.path_scroll = self.path_scroll.saturating_add(1);
                 AppAction::None
             }
-            KeyCode::Enter => {
+            KeyCode::Enter if self.focused_section == SectionFocus::Sources => {
                 self.detail_visible = !self.detail_visible;
                 AppAction::None
             }
-            KeyCode::Down | KeyCode::Char('j') => self.move_selection(1),
-            KeyCode::Up | KeyCode::Char('k') => self.move_selection(-1),
-            KeyCode::PageDown | KeyCode::Char(' ') => self.move_selection(10),
-            KeyCode::PageUp => self.move_selection(-10),
-            KeyCode::Home => self
+            KeyCode::Down | KeyCode::Char('j') if self.focused_section == SectionFocus::Sources => {
+                self.move_selection(1)
+            }
+            KeyCode::Up | KeyCode::Char('k') if self.focused_section == SectionFocus::Sources => {
+                self.move_selection(-1)
+            }
+            KeyCode::PageDown | KeyCode::Char(' ')
+                if self.focused_section == SectionFocus::Sources =>
+            {
+                self.move_selection(10)
+            }
+            KeyCode::PageUp if self.focused_section == SectionFocus::Sources => {
+                self.move_selection(-10)
+            }
+            KeyCode::Home if self.focused_section == SectionFocus::Sources => self
                 .selectable_indices
                 .first()
                 .map_or(AppAction::None, |_| {
                     self.selected_position = Some(0);
                     AppAction::None
                 }),
-            KeyCode::End => {
-                self.selectable_indices
-                    .len()
-                    .checked_sub(1)
-                    .map_or(AppAction::None, |last| {
-                        self.selected_position = Some(last);
-                        AppAction::None
-                    })
-            }
+            KeyCode::End if self.focused_section == SectionFocus::Sources => self
+                .selectable_indices
+                .len()
+                .checked_sub(1)
+                .map_or(AppAction::None, |last| {
+                    self.selected_position = Some(last);
+                    AppAction::None
+                }),
             _ => AppAction::None,
         }
     }
@@ -204,7 +242,18 @@ pub fn render(frame: &mut Frame, app: &App) {
         ],
     )
     .header(header)
-    .block(Block::default().borders(Borders::ALL).title(" Sources "))
+    .block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(section_border_style(
+                app.focused_section() == SectionFocus::Sources,
+            ))
+            .title(if app.focused_section() == SectionFocus::Sources {
+                " Sources [FOCUS] "
+            } else {
+                " Sources "
+            }),
+    )
     .row_highlight_style(Style::default().add_modifier(Modifier::REVERSED))
     .highlight_symbol("› ");
     let mut table_state = TableState::default();
@@ -248,7 +297,14 @@ pub fn render(frame: &mut Frame, app: &App) {
             Paragraph::new(lines).block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .title(" PATH directories "),
+                    .border_style(section_border_style(
+                        app.focused_section() == SectionFocus::Path,
+                    ))
+                    .title(if app.focused_section() == SectionFocus::Path {
+                        " PATH directories [FOCUS] "
+                    } else {
+                        " PATH directories "
+                    }),
             ),
             areas[3],
         );
@@ -266,6 +322,16 @@ pub fn render(frame: &mut Frame, app: &App) {
         ),
         areas[4],
     );
+}
+
+fn section_border_style(active: bool) -> Style {
+    if active {
+        Style::default()
+            .fg(Color::Cyan)
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default()
+    }
 }
 
 fn path_panel_height(

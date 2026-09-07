@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use manapp::model::{SourceSnapshot, SourceStatus};
 use manapp::registry::source_registry;
-use manapp::ui::{App, AppAction, render};
+use manapp::ui::{App, AppAction, SectionFocus, render};
 use ratatui::{Terminal, backend::TestBackend, style::Color};
 
 fn snapshots() -> Vec<SourceSnapshot> {
@@ -320,6 +320,53 @@ fn path_section_is_capped_at_half_height_and_scrollable() {
         .draw(|frame| render(frame, &app))
         .expect("render scrolled path page");
     assert!(buffer_text(terminal.backend().buffer()).contains("21. /path/21"));
+}
+
+#[test]
+fn tab_switches_focus_between_sources_and_path() {
+    let mut app = App::with_path_entries(snapshots(), numbered_path_entries());
+
+    assert_eq!(app.focused_section(), SectionFocus::Sources);
+    assert!(!app.path_visible());
+
+    app.handle_key(key(KeyCode::Tab));
+    assert_eq!(app.focused_section(), SectionFocus::Path);
+    assert!(app.path_visible());
+
+    app.handle_key(key(KeyCode::Tab));
+    assert_eq!(app.focused_section(), SectionFocus::Sources);
+}
+
+#[test]
+fn section_focus_routes_section_specific_controls() {
+    let mut app = App::with_path_entries(snapshots(), numbered_path_entries());
+
+    app.handle_key(key(KeyCode::Char(']')));
+    assert_eq!(app.path_scroll(), 0);
+    app.handle_key(key(KeyCode::Enter));
+    assert!(app.detail_visible());
+
+    app.handle_key(key(KeyCode::Tab));
+    app.handle_key(key(KeyCode::Char(']')));
+    assert_eq!(app.path_scroll(), 1);
+    app.handle_key(key(KeyCode::Enter));
+    assert!(app.detail_visible());
+}
+
+#[test]
+fn active_section_is_visually_marked() {
+    let mut app = App::with_path_entries(snapshots(), numbered_path_entries());
+    app.handle_key(key(KeyCode::Tab));
+
+    let backend = TestBackend::new(120, 30);
+    let mut terminal = Terminal::new(backend).expect("test terminal");
+    terminal
+        .draw(|frame| render(frame, &app))
+        .expect("render focused path section");
+    let content = buffer_text(terminal.backend().buffer());
+
+    assert!(content.contains("PATH directories [FOCUS]"));
+    assert!(!content.contains("Sources [FOCUS]"));
 }
 
 fn buffer_text(buffer: &ratatui::buffer::Buffer) -> String {
