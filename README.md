@@ -20,7 +20,9 @@ Semua source yang didukung selalu ditampilkan. Source yang command-nya tidak ter
 
 Tabel Sources memiliki kolom `No.` untuk nomor urut visual. Sumber yang enabled ditampilkan lebih dulu, lalu sumber `DISABLED`; masing-masing kelompok tetap diurutkan secara alfabetis.
 
-## Sumber yang didukung
+## Sumber yang didukung (alfabetis)
+
+Daftar berikut diurutkan secara alfabetis berdasarkan nama source.
 
 - Cargo
 - Composer
@@ -80,54 +82,14 @@ Kontrol keyboard:
 
 Section `PATH directories` berada di bawah Detail, default hidden, dan mempertahankan urutan resolve yang diberikan sistem melalui environment variable `PATH`, termasuk duplikat; path tidak diurutkan alfabetis. Daftarnya memiliki kolom `No.`, `PATH`, `SOURCE HINT`, dan `NOTE / CATATAN`. Kolom `SOURCE HINT` diisi jika path dapat dicocokkan dengan `/etc/paths`, `/etc/paths.d/*`, atau path literal pada file shell user; selain itu dibiarkan kosong. Kolom `NOTE / CATATAN` berisi `Warning: path duplikat` atau `Error: folder tidak ada` jika relevan. `Tab` akan membukanya saat fokus berpindah dari Sources; section aktif diberi label `[FOCUS]`, dan row PATH aktif diberi reverse highlight. Tingginya dibatasi maksimal 50% tinggi terminal dan dapat di-scroll dengan `↑`/`↓` atau `j`/`k` saat fokus berada di section PATH; viewport mengikuti row aktif.
 
-## How to develop
+## Development
 
-Rencana detail, keputusan desain, dan status pengerjaan tersedia di:
+Panduan struktur kode, workflow validasi, cara menambahkan source, dan status progress tersedia di [Panduan Development](docs/how-to/development.md).
+
+Dokumen desain dan rencana implementasi juga tersedia di:
 
 - [Design dan status fitur](docs/superpowers/specs/2026-09-07-mangap-sources-design.md)
 - [Implementation plan dan progress](docs/superpowers/plans/2026-09-07-mangap-sources.md)
-
-### Struktur kode
-
-- `src/model.rs`: tipe data sumber dan status deteksi.
-- `src/registry.rs`: katalog sumber yang didukung dalam urutan alfabetis.
-- `src/detect.rs`: resolver command pada `PATH`.
-- `src/ui.rs`: state aplikasi, layout tabel, warna, detail, dan navigasi.
-- `src/main.rs`: lifecycle terminal dan event loop.
-- `tests/`: test kontrak model, registry, detector, UI, dan binary.
-
-### Perintah development
-
-Format kode:
-
-```bash
-cargo fmt --all
-```
-
-Validasi format, test, dan lint:
-
-```bash
-cargo fmt --all -- --check
-cargo test --all-targets
-cargo clippy --all-targets --all-features -- -D warnings
-```
-
-Ukur coverage:
-
-```bash
-cargo install cargo-llvm-cov --locked
-cargo llvm-cov --all-targets --summary-only --fail-under-lines 80
-```
-
-### Menambahkan sumber baru
-
-1. Tambahkan `SourceDefinition` baru di `src/registry.rs`.
-2. Letakkan entry pada posisi alfabetis berdasarkan `name`.
-3. Isi `id`, `name`, minimal satu command kandidat, dan `category`.
-4. Tambahkan atau perbarui test registry dan detector.
-5. Jalankan format, test, Clippy, dan coverage.
-
-Detector tidak menjalankan shell atau mengevaluasi command sebagai string. Ia hanya mencari executable kandidat pada `PATH`, sehingga setiap sumber dapat diuji secara deterministik menggunakan resolver palsu.
 
 ## Roadmap
 
