@@ -2,7 +2,9 @@
 
 **Date:** 2026-09-07
 
-## Status Implementasi
+> **Status:** Archived. Backlog aktif dikelola melalui GitHub Issues; dokumen ini hanya menjadi referensi historis untuk halaman Sources.
+
+## History Implementasi
 
 | Area | Status | Evidence / Catatan |
 |---|---|---|
@@ -11,15 +13,10 @@
 | Source enabled sebelum `DISABLED` | Implemented | `src/ui.rs`, test ordering UI |
 | Panel PATH dan urutan resolve sistem | Implemented | `src/detect.rs`, `src/ui.rs` |
 | Source hint dan catatan error/warning PATH | Implemented | `src/detect.rs`, `src/ui.rs` |
-| Daftar aplikasi dari setiap source | Planned | Belum ada collector atau halaman aplikasi |
-| Kolom aplikasi konsisten lintas source | Planned | Menunggu desain kontrak data aplikasi |
-| Deteksi storage per aplikasi | Planned | Menunggu daftar aplikasi dan strategi pengukuran |
 
 ## Goal
 
-Membuat aplikasi terminal `mangap` (MangApp / Manage Applications) berbasis Rust + Ratatui yang dibuat khusus untuk MacBook dan pada tahap pertama menampilkan katalog sumber instalasi yang didukung. Semua sumber yang didukung selalu terlihat; sumber yang executable-nya tidak tersedia di sistem ditampilkan sebagai `DISABLED` dengan gaya visual redup.
-
-Tahap ini hanya mencakup halaman Sources. Pengambilan dan tampilan daftar aplikasi dari masing-masing sumber menjadi tahap berikutnya.
+Membuat aplikasi terminal `mangap` (MangApp / Manage Applications) berbasis Rust + Ratatui yang dibuat khusus untuk MacBook dan menampilkan katalog sumber instalasi yang didukung. Semua sumber yang didukung selalu terlihat; sumber yang executable-nya tidak tersedia di sistem ditampilkan sebagai `DISABLED` dengan gaya visual redup.
 
 ## User experience
 
@@ -150,12 +147,3 @@ Script yang tidak diawali `list_`—termasuk `cleanup.sh` dan `update.sh`—teta
 4. `[Implemented]` Sumber yang tidak tersedia terlihat disabled dan tidak disalahartikan sebagai error.
 5. `[Implemented]` Refresh dan exit tidak meninggalkan terminal dalam mode alternate/raw.
 6. `[Implemented]` Seluruh script `list_*` dan test lamanya sudah dihapus setelah implementasi dinyatakan solid.
-
-## Gaps dan Rencana Berikutnya
-
-| Tahap | Status | Rencana |
-|---|---|---|
-| Sources page | Implemented | Pertahankan sebagai baseline stabil sebelum menambah halaman baru. |
-| Application inventory | Planned | Tambahkan adapter collector per source dan halaman daftar aplikasi. |
-| Unified application table | Planned | Tetapkan kontrak kolom bersama; data yang tidak tersedia diberi flag/warna. |
-| Storage inspection | Planned | Tambahkan pengukuran storage per aplikasi dengan status unavailable jika source tidak mendukung. |

@@ -1,10 +1,10 @@
 # MangApp Sources Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
->
-> **Current status:** Tasks 1–7 below are `Implemented`. The checkboxes preserve the original execution breakdown; the status tables in this document are the current source of truth.
+> **Status:** Archived. Implementasi halaman Sources telah selesai. Backlog aktif dipindahkan ke GitHub Issues dan tidak lagi dikelola di dokumen ini.
 
-**Goal:** Membuat aplikasi Rust + Ratatui bernama `mangap` (MangApp / Manage Applications) yang dibuat khusus untuk MacBook dan menampilkan sumber instalasi, aplikasi yang dikelola oleh setiap source, serta penggunaan storage per aplikasi melalui UI terminal yang konsisten.
+> **Historical status:** Tasks 1–7 below are `Implemented`. The checkboxes preserve the original execution breakdown for historical reference.
+
+**Goal:** Membuat aplikasi Rust + Ratatui bernama `mangap` (MangApp / Manage Applications) yang dibuat khusus untuk MacBook dan menampilkan katalog sumber instalasi melalui UI terminal yang konsisten.
 
 **Architecture:** `mangap` memakai katalog sumber compiled-in, resolver command yang dapat diuji, model snapshot status, dan UI Ratatui yang dipisahkan dari lifecycle terminal. Binary hanya mengatur probing awal, refresh, alternate screen, raw mode, dan event loop; registry, detector, model, dan rendering berada di library agar dapat diuji tanpa terminal nyata.
 
@@ -12,7 +12,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-07-mangap-sources-design.md`
 
-## Status Saat Ini
+## History Implementasi
 
 | Workstream | Status | Evidence |
 |---|---|---|
@@ -22,9 +22,6 @@
 | PATH listing dengan urutan resolve sistem | Implemented | `src/detect.rs`, `src/ui.rs`, `tests/detect_contract.rs` |
 | PATH source hint, duplicate warning, missing-folder note | Implemented | `src/detect.rs`, `src/ui.rs` |
 | README publik dan dokumentasi status | Implemented | `README.md`, `docs/superpowers/` |
-| Daftar aplikasi per source | Planned | Belum ada application collector |
-| Kontrak kolom aplikasi lintas source | Planned | Belum ada model aplikasi terpadu |
-| Deteksi storage per aplikasi | Planned | Belum ada storage collector |
 
 ## Bukti Validasi Terakhir
 
@@ -44,8 +41,6 @@ Pada rename terakhir ke MangApp, repository telah melewati:
 | PATH panel, scrolling, focus row, source hint, dan kolom note | Implemented | `7e0ebc1`, `17e8ca0`, `87a2e7c` |
 | Pengurutan enabled sebelum `DISABLED` dan nomor urut | Implemented | `f97de67`, `9e11e8d`, `8d21ac7` |
 | Rename menjadi MangApp / `mangap` | Implemented | `e096e8d`, `82c0da5` |
-| Daftar aplikasi dari source | Planned | Menunggu tahap berikutnya |
-| Deteksi dan ringkasan storage | Planned | Menunggu model aplikasi |
 
 ## Global Constraints
 
@@ -411,41 +406,10 @@ Pada rename terakhir ke MangApp, repository telah melewati:
   git commit -m "chore: remove legacy list scripts"
   ```
 
-## Forward Plan
-
-Tahap berikutnya baru dimulai setelah Sources page dipertahankan sebagai baseline yang stabil.
-
-### Task 8: Application inventory per source — Planned
-
-- Define model aplikasi bersama: nama, identifier, version, source, install location, dan availability setiap field.
-- Tambahkan adapter collector untuk source yang tersedia tanpa menghilangkan source yang `DISABLED`.
-- Tambahkan halaman Applications yang dapat dibuka dari Sources dan memiliki empty/loading/error state yang jelas.
-- Tambahkan test kontrak per adapter serta test UI untuk source dengan field yang tidak tersedia.
-
-### Task 9: Unified application table — Planned
-
-- Tetapkan kolom tetap lintas source.
-- Pertahankan kolom ketika data tidak tersedia; tampilkan flag atau warna pada cell terkait.
-- Pastikan sorting, filtering, focus, dan scrolling konsisten dengan Sources page.
-- Tambahkan acceptance test untuk alignment kolom pada terminal lebar dan sempit.
-
-### Task 10: Storage inspection — Planned
-
-- Tentukan definisi storage: binary, package files, cache, data user, dan total yang dapat diukur.
-- Implementasikan collector storage yang aman dan tidak menghapus atau mengubah file.
-- Tampilkan status `Unavailable` ketika pengukuran tidak didukung atau gagal.
-- Tambahkan test untuk path hilang, permission error, symlink, dan ukuran directory besar.
-
-### Task 11: Release readiness — Planned
-
-- Perbarui README publik dengan fitur yang benar-benar sudah tersedia.
-- Tambahkan test strategy atau release checklist ketika halaman Applications mulai diimplementasikan.
-- Jalankan format, test, lint, coverage, dan interactive smoke test sebelum merge ke `main`.
-
 ## Plan self-review
 
 - Alphabetical ordering is specified in the registry task and asserted in `registry_contract`.
 - Disabled support is represented in the model, detector, renderer, and UI tests.
-- The application-list phase is explicitly excluded from every implementation task.
+- The application-list phase was explicitly excluded from the completed Sources implementation.
 - Coverage is measured after implementation and before deletion; tests are added for uncovered branches rather than hiding them.
 - Deletion is isolated in its own commit and leaves unrelated maintenance scripts intact.

@@ -86,10 +86,9 @@ Semua source didaftarkan di registry agar tetap dapat ditampilkan sebagai `DISAB
 
 Detector tidak menjalankan shell atau mengevaluasi command sebagai string. Detector hanya mencari executable kandidat pada `PATH`, sehingga setiap source dapat diuji secara deterministik menggunakan resolver palsu.
 
-## Dokumentasi desain dan progress
+## History dan backlog
 
-- [Design dan status fitur](../superpowers/specs/2026-09-07-mangap-sources-design.md)
-- [Implementation plan dan progress](../superpowers/plans/2026-09-07-mangap-sources.md)
+- [History: MangApp Sources](../history/2026-09-07-mangapp-sources.md)
 
 Status repository saat ini:
 
@@ -98,13 +97,11 @@ Status repository saat ini:
 | Halaman Sources untuk source yang didukung | Implemented |
 | Status `AVAILABLE`, `ERROR`, dan `DISABLED` | Implemented |
 | Panel PATH, source hint, warning duplicate, dan error missing path | Implemented |
-| Daftar aplikasi dari setiap source | Planned |
-| Kolom aplikasi yang konsisten lintas source | Planned |
-| Deteksi penggunaan storage per aplikasi | Planned |
+
+Backlog aktif dikelola melalui [GitHub Issues](https://github.com/iyank4/mangapp/issues), sedangkan dokumen ini hanya menjelaskan implementasi dan workflow yang sudah tersedia.
 
 ## Prinsip perubahan
 
 - Pertahankan dukungan macOS sebagai scope produk.
 - Pertahankan urutan source alfabetis di registry; UI menampilkan source enabled lebih dahulu dan `DISABLED` setelahnya.
-- Jangan menghapus kolom hanya karena data tidak tersedia dari suatu source; gunakan flag, warna, atau catatan yang jelas pada tahap daftar aplikasi.
 - Pertahankan test yang menjelaskan kontrak perilaku dan jalankan validasi sebelum commit.
