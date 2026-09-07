@@ -1,12 +1,12 @@
-# ManGApp — Manage Grouped Applications
+# MangApp - Manage Applications
 
-`mangap` adalah aplikasi terminal ManGApp (Manage Grouped Applications) untuk developer macOS. Aplikasi ini membantu melihat sumber instalasi dan, pada tahap berikutnya, aplikasi yang dikelola oleh setiap sumber beserta penggunaan storage-nya. Aplikasi ini dibuat dengan Rust, Ratatui, dan Crossterm.
+`mangap` adalah aplikasi terminal MangApp (Manage Applications) yang dibuat khusus untuk MacBook. Aplikasi ini membantu melihat sumber instalasi dan, pada tahap berikutnya, aplikasi yang dikelola oleh setiap sumber beserta penggunaan storage-nya. Aplikasi ini dibuat dengan Rust, Ratatui, dan Crossterm.
 
 ## Status Fitur
 
 | Fitur | Status |
 | --- | --- |
-| Nama produk ManGApp dan binary `mangap` | Implemented |
+| Nama produk MangApp dan binary `mangap` | Implemented |
 | Halaman Sources dengan sumber yang didukung | Implemented |
 | Source `AVAILABLE`, `ERROR`, dan `DISABLED` | Implemented |
 | Pengurutan source enabled sebelum `DISABLED` | Implemented |
@@ -50,7 +50,7 @@ Status yang ditampilkan:
 
 Prasyarat:
 
-- macOS
+- MacBook dengan macOS
 - Rust stable dan Cargo
 
 Jalankan dari root project:
