@@ -36,9 +36,9 @@ Dokumen ini adalah acuan desain dan implementasi berikutnya. Collector aplikasi,
 ## Istilah dan identitas baris
 
 - **Application record** adalah hasil normalisasi satu aplikasi dari satu source.
-- Satu baris mewakili satu record `source_id + identifier`; aplikasi dengan nama sama dari dua source tetap menjadi dua baris agar provenance dan perbandingan source tidak hilang.
+- Satu baris mewakili satu record `source + identifier`; aplikasi dengan nama sama dari dua source tetap menjadi dua baris agar provenance dan perbandingan source tidak hilang.
 - `No.` hanya nomor visual setelah filter dan sorting diterapkan. Nomor bukan identifier dan boleh berubah setelah refresh, filter, atau sorting.
-- `source_id` mengikuti id stabil pada registry source. Nama tampilan boleh berubah tanpa mengubah identitas record.
+- `source` berisi stable source ID dari registry. Nilai ini adalah identifier teknis, bukan nama tampilan, dan tidak boleh berubah ketika label source diubah.
 
 ## Kontrak data baris
 
@@ -47,43 +47,112 @@ Representasi konseptual berikut menjadi batas antara collector dan UI. Tipe aktu
 ```text
 ApplicationRecord {
   record_key:  StableRecordKey,
-  source_id:   StableSourceId,
-  source_name: DisplayText,
+  source:      StableSourceId,
   name:        CellValue,
   version:     CellValue,
   identifier:  CellValue,
   status:      RecordStatus,
   location:    CellValue,
+  installed_at: CellValue,
+  updated_at:   CellValue,
   note:        CellValue,
 }
 ```
 
 | Field | Tampil sebagai | Aturan | Status |
 | --- | --- | --- | --- |
-| `record_key` | tidak ditampilkan; dipakai untuk selection/refresh | stabil dalam satu hasil collection; dibentuk dari `source_id` + identifier, atau fallback deterministik saat identifier unavailable | Planned |
-| `source_id` | tidak wajib menjadi kolom terpisah; dipakai untuk provenance | harus stabil dan cocok dengan registry | Planned |
-| `source_name` | `Source` | nama tampilan dari registry; tidak boleh kosong | Planned |
-| `name` | `Application` | nama aplikasi yang dilaporkan source | Planned |
-| `version` | `Version` | versi mentah dari source; UI tidak mengubah makna semver/non-semver | Planned |
+| `record_key` | tidak ditampilkan; dipakai untuk selection/refresh | stabil dalam satu hasil collection; dibentuk dari `source` + identifier, atau fallback deterministik saat identifier unavailable | Planned |
+| `source` | `Sumber` | stable source ID dari registry, misalnya `homebrew`, `cargo`, atau `mas`; tidak boleh kosong | Planned |
+| `name` | `Aplikasi` | nama aplikasi yang dilaporkan source | Planned |
+| `version` | `Versi` | nomor versi dan build number yang dilaporkan source; UI tidak mengubah makna semver/non-semver | Planned |
 | `identifier` | `Identifier` | nama package/bundle/id source; boleh unavailable | Planned |
 | `status` | `Status` | status record atau hasil pengambilan data | Planned |
-| `location` | `Location` | lokasi install/cache bila source menyediakannya | Planned |
-| `note` | `Keterangan` | alasan status, warning, atau informasi tambahan | Planned |
+| `location` | `Lokasi` | path instalasi bila source menyediakannya | Planned |
+| `installed_at` | panel detail, bukan kolom tabel | tanggal instalasi yang dilaporkan source | Planned |
+| `updated_at` | panel detail, bukan kolom tabel | tanggal terakhir aplikasi diperbarui menurut source | Planned |
+| `note` | panel detail, bukan kolom tabel | alasan status, warning, atau informasi tambahan | Planned |
+
+Panel detail record menampilkan `Tanggal Install`, `Tanggal Update`, dan `note` bersama informasi lengkap record. Ketiga field tersebut tidak menjadi kolom tabel dan tidak mengubah lebar atau alignment tabel utama.
+
+## Nilai kolom Status
+
+`Status` adalah status level-record dan hanya menggunakan empat nilai berikut:
+
+| Status | Arti | Contoh kondisi |
+| --- | --- | --- |
+| `AVAILABLE` | record berhasil dikumpulkan dan mewakili aplikasi yang ditemukan | nama aplikasi berhasil dibaca; field opsional boleh tetap `EMPTY`, `UNAVAILABLE`, atau `N/A` |
+| `EMPTY` | collector berhasil, tetapi field yang diharapkan dari record tidak berisi nilai | source mengembalikan record dengan versi atau identifier kosong |
+| `UNAVAILABLE` | record atau data wajib tidak dapat disediakan oleh source/collector, tanpa terjadi kegagalan proses | source tidak menyediakan daftar aplikasi atau identifier wajib untuk record |
+| `ERROR` | proses probe atau collection gagal | command source gagal dijalankan atau output tidak dapat diproses |
+
+`VALUE`, `EMPTY`, `UNAVAILABLE`, `NOT_APPLICABLE`, dan `ERROR` adalah state pada level cell. `N/A` adalah token tampilan untuk state `NOT_APPLICABLE`, bukan nilai pada kolom `Status`. Field opsional yang tidak didukung source tidak otomatis mengubah status row menjadi `UNAVAILABLE`; cell tersebut menggunakan `N/A` atau `UNAVAILABLE` sesuai kondisinya. Jika collection berhasil tetapi tidak menghasilkan satu pun record, gunakan empty state tabel; jangan membuat application row palsu hanya untuk menampilkan `EMPTY`.
+
+## Nilai kolom Identifier per source
+
+`Identifier` menggunakan identifier native yang dilaporkan source. Nilai ini bukan nama tampilan aplikasi dan bukan path instalasi. Jika source menyediakan format canonical, gunakan format tersebut; jangan mengganti identifier dengan nama aplikasi hanya karena identifier native tidak tersedia.
+
+| Source ID | Nilai `Identifier` | Contoh |
+| --- | --- | --- |
+| `cargo` | nama crate/package | `ripgrep` |
+| `composer` | nama package Composer dalam format `vendor/package` | `laravel/framework` |
+| `conda` | nama package Conda | `numpy` |
+| `dart` | nama package Pub | `http` |
+| `flutter` | nama package Pub atau package global Flutter | `melos` |
+| `go` | module path Go, atau nama binary jika module path tidak tersedia | `golang.org/x/tools/gopls` |
+| `homebrew` | token formula atau cask | `git`, `visual-studio-code` |
+| `mas` | numeric App Store ID | `497799835` |
+| `macports` | nama port | `wget` |
+| `nix` | attribute/installable package Nix seperti yang dilaporkan profile | `nixpkgs#ripgrep` |
+| `npm` | nama package npm, termasuk scope bila ada | `@angular/cli` |
+| `pipx` | nama project/package PyPI | `black` |
+| `pnpm` | nama package pnpm, termasuk scope bila ada | `typescript` |
+| `python-pip` | nama distribution/project Python | `requests` |
+| `rubygems` | nama gem | `rails` |
+| `uv` | nama project/package Python | `ruff` |
+| `yarn` | nama package Yarn, termasuk scope bila ada | `react` |
+
+Jika identifier native tidak didukung atau gagal dibaca, cell tetap menggunakan `N/A` atau `UNAVAILABLE` sesuai state-nya. Jangan menggunakan hash store path, nomor urut tabel, atau nama tampilan sebagai identifier native.
 
 ## Kontrak kolom tabel
 
 Urutan berikut adalah kontrak tetap. Semua source mengisi kolom yang sama; source tidak boleh menambah, menghapus, atau menggeser kolom berdasarkan field yang tersedia.
 
+Susunan kanonis yang direkomendasikan:
+
+```text
+No. | Aplikasi | Versi | Sumber | Status | Identifier | Lokasi
+```
+
+Urutan ini memprioritaskan perbandingan yang paling sering dilakukan pengguna di sebelah kiri, lalu provenance dan status, kemudian metadata yang biasanya lebih panjang atau bersifat penjelas di sebelah kanan:
+
+1. `No.` — nomor visual; bukan bagian dari identitas record.
+2. `Aplikasi` — identitas utama yang dibaca dan dibandingkan pengguna.
+3. `Versi` — diletakkan dekat nama agar perbandingan versi cepat dilakukan.
+4. `Sumber` — provenance, yaitu package manager atau katalog asal record.
+5. `Status` — keadaan record atau collection; diletakkan dekat `Sumber` agar kondisi data cepat dipindai dan token status tetap terlihat tanpa mengandalkan warna.
+6. `Identifier` — nama package, bundle id, app id, atau identifier setara.
+7. `Lokasi` — path instalasi yang dilaporkan source.
+
+Kolom `Identifier` adalah kolom teknis bersama. Jangan membuat kolom terpisah seperti `Formula`, `Bundle ID`, `Package`, atau `App ID` untuk source tertentu; semua nilai tersebut dipetakan ke `Identifier`. Demikian pula, path instalasi selalu dipetakan ke `Lokasi`. Nomor versi dan build number tetap berada dalam satu kolom `Versi`, misalnya `1.2.3 (Build 456)`. Detail error, warning, dan konteks tambahan ditampilkan pada panel detail, bukan sebagai kolom tabel. Dengan begitu, kemampuan source yang berbeda hanya memengaruhi nilai cell, bukan susunan tabel.
+
+Format tampilan `Versi`:
+
+- versi dan build tersedia: `1.2.3 (Build 456)`;
+- hanya versi tersedia: `1.2.3`;
+- hanya build tersedia: `Build 456`;
+- keduanya tidak tersedia: gunakan state cell yang sesuai, bukan string kosong tanpa penanda.
+
+Format tampilan `Tanggal Install` dan `Tanggal Update` pada panel detail adalah `YYYY-MM-DD`. Jika source menyediakan timestamp, waktu dikonversi ke zona waktu lokal pengguna lalu bagian tanggalnya yang ditampilkan. Waktu lengkap tetap dapat ditampilkan pada panel detail bila diperlukan.
+
 | Urutan | Header | Isi | Jika data tidak tersedia |
 | ---: | --- | --- | --- |
 | 1 | `No.` | nomor visual 1-based | tetap tampil; tidak berasal dari source |
-| 2 | `Application` | nama aplikasi | `UNAVAILABLE` bila source tidak dapat menyediakan nama; record tanpa nama tidak boleh tampil sebagai data valid |
-| 3 | `Version` | versi yang dilaporkan source | `EMPTY` bila source sukses tetapi tidak melaporkan versi; `N/A` bila field tidak berlaku; `UNAVAILABLE` bila collector/source tidak dapat mengambilnya |
-| 4 | `Source` | nama source | selalu diisi dari registry; jika source gagal, status/error dijelaskan di `Status` dan `Keterangan` |
-| 5 | `Identifier` | package name, bundle id, atau identifier setara | `N/A` bila konsep tidak berlaku; `UNAVAILABLE` bila seharusnya ada tetapi gagal dibaca |
-| 6 | `Status` | `AVAILABLE`, `EMPTY`, `UNAVAILABLE`, atau `ERROR` | status tidak boleh disamakan dengan isi kosong |
-| 7 | `Location` | path atau lokasi yang dilaporkan source | `N/A`, `UNAVAILABLE`, atau `ERROR` sesuai state data |
-| 8 | `Keterangan` | alasan, warning, atau konteks | tetap tampil; gunakan `—` jika tidak ada keterangan |
+| 2 | `Aplikasi` | nama aplikasi | `UNAVAILABLE` bila source tidak dapat menyediakan nama; record tanpa nama tidak boleh tampil sebagai data valid |
+| 3 | `Versi` | nomor versi dan build number yang dilaporkan source | `EMPTY` bila source sukses tetapi tidak melaporkan versi/build; `N/A` bila field tidak berlaku; `UNAVAILABLE` bila collector/source tidak dapat mengambilnya |
+| 4 | `Sumber` | stable source ID dari registry | selalu diisi dari registry; jika source gagal, status ditampilkan di `Status` dan detailnya tersedia pada panel detail |
+| 5 | `Status` | `AVAILABLE`, `EMPTY`, `UNAVAILABLE`, atau `ERROR` | status tidak boleh disamakan dengan isi kosong |
+| 6 | `Identifier` | package name, bundle id, atau identifier setara | `N/A` bila konsep tidak berlaku; `UNAVAILABLE` bila seharusnya ada tetapi gagal dibaca |
+| 7 | `Lokasi` | path instalasi yang dilaporkan source | `N/A`, `UNAVAILABLE`, atau `ERROR` sesuai state data |
 
 Header dan urutan kolom harus sama pada seluruh source dan seluruh refresh. Perbedaan kemampuan source hanya memengaruhi nilai/state cell, bukan struktur tabel.
 
@@ -102,7 +171,7 @@ Setiap nilai yang tidak berupa data valid harus memiliki state eksplisit. UI men
 Aturan tambahan:
 
 - Cell unavailable atau tidak relevan tetap mengambil lebar kolomnya.
-- `—` tanpa label hanya boleh dipakai untuk `Keterangan` yang memang tidak memiliki catatan; jangan gunakan `—` untuk menyamarkan `EMPTY`, `UNAVAILABLE`, atau `ERROR`.
+- Detail error, warning, atau konteks tambahan ditampilkan pada panel detail; jangan gunakan `—` untuk menyamarkan `EMPTY`, `UNAVAILABLE`, atau `ERROR` pada cell tabel.
 - `Status` adalah status yang dapat difilter. State setiap cell tetap dipertahankan agar detail kegagalan tidak hilang.
 - Warna tidak boleh menjadi satu-satunya penanda; token teks harus tetap membedakan state saat warna tidak tersedia.
 
@@ -110,13 +179,13 @@ Aturan tambahan:
 
 ### Terminal lebar
 
-Pada terminal lebar (target minimum 120 kolom), semua delapan kolom ditampilkan dalam urutan kontrak. Lebar kolom boleh memakai pembagian fixed/weighted, tetapi header dan cell pada row yang sama harus menggunakan definisi lebar yang sama.
+Pada terminal lebar (target minimum 120 kolom), semua tujuh kolom ditampilkan dalam urutan kontrak. Lebar kolom boleh memakai pembagian fixed/weighted, tetapi header dan cell pada row yang sama harus menggunakan definisi lebar yang sama.
 
 Prioritas ruang minimum:
 
 1. `No.` dan `Status` selalu terlihat penuh.
-2. `Application`, `Source`, dan `Version` mendapat ruang utama untuk perbandingan.
-3. `Identifier`, `Location`, dan `Keterangan` boleh dipotong secara visual, tetapi tidak boleh berpindah ke kolom lain.
+2. `Aplikasi`, `Sumber`, dan `Versi` mendapat ruang utama untuk perbandingan.
+3. `Identifier` dan `Lokasi` boleh dipotong secara visual, tetapi tidak boleh berpindah ke kolom lain.
 
 ### Terminal sempit
 
@@ -138,14 +207,14 @@ Application Inventory menggunakan model interaksi yang sama dengan Sources: sele
 ### Sorting
 
 - Urutan default: `Application` ascending, case-insensitive.
-- Tie-breaker: `Source` mengikuti urutan registry, lalu `Version` descending sebagai teks natural jika dapat dibandingkan, lalu `Identifier` ascending.
+- Tie-breaker: `Sumber` mengikuti urutan registry berdasarkan stable source ID, lalu `Versi` descending sebagai teks natural jika dapat dibandingkan, lalu `Identifier` ascending.
 - Sorting bersifat stable; record yang semua key-nya sama mempertahankan urutan hasil collector.
 - `No.` dihitung ulang setelah sorting.
 - Nilai `EMPTY`, `UNAVAILABLE`, `N/A`, dan `ERROR` diurutkan setelah nilai valid pada kolom yang sedang di-sort.
 
 ### Filtering
 
-- Filter adalah pencarian teks case-insensitive terhadap `Application`, `Version`, `Source`, `Identifier`, `Status`, dan `Keterangan`.
+- Filter adalah pencarian teks case-insensitive terhadap `Aplikasi`, `Versi`, `Sumber`, `Status`, `Identifier`, dan `Lokasi`.
 - Filter tidak mengubah data asli; hanya membatasi row yang ditampilkan.
 - Row yang tidak cocok tidak dihitung dalam `No.` dan tidak dapat dipilih.
 - Jika tidak ada hasil, tabel tetap menampilkan header dan pesan `Tidak ada aplikasi yang cocok dengan filter`.
@@ -170,9 +239,9 @@ Application Inventory menggunakan model interaksi yang sama dengan Sources: sele
 | Kondisi | Tampilan row | Dampak interaksi |
 | --- | --- | --- |
 | Source tersedia dan record valid | data normal, `Status = AVAILABLE` | row dapat dipilih |
-| Source berhasil tetapi field tertentu kosong | field bertoken `EMPTY`; `Keterangan` menjelaskan bila perlu | row tetap dapat dipilih |
+| Source berhasil tetapi field tertentu kosong | field bertoken `EMPTY`; panel detail menjelaskan bila perlu | row tetap dapat dipilih |
 | Source/field tidak tersedia | field bertoken `UNAVAILABLE` atau `N/A` | row tetap tampil dan kolom tetap utuh |
-| Collection/probe gagal | `Status = ERROR`, detail error di `Keterangan` | row tetap tampil agar error dapat ditinjau |
+| Collection/probe gagal | `Status = ERROR`, detail error di panel detail | row tetap tampil agar error dapat ditinjau |
 | Tidak ada record setelah filter | header tetap tampil dan empty-state jelas | selection kosong; clear filter tersedia |
 
 Error pada satu source tidak boleh menghilangkan record/source lain. Detail error tidak boleh ditampilkan sebagai `DISABLED`, karena `DISABLED` adalah status katalog Sources untuk command yang tidak ditemukan dan bukan status data inventory.
@@ -181,7 +250,7 @@ Error pada satu source tidak boleh menghilangkan record/source lain. Detail erro
 
 | Requirement issue #1 | Kontrak | Evidence saat ini | Status |
 | --- | --- | --- | --- |
-| Semua source memakai layout kolom yang sama | urutan delapan kolom tetap | `src/ui.rs` saat ini baru memiliki tabel Sources; inventory belum ada | Planned / Gap |
+| Semua source memakai layout kolom yang sama | urutan tujuh kolom tetap | `src/ui.rs` saat ini baru memiliki tabel Sources; inventory belum ada | Planned / Gap |
 | Data unavailable tidak menggeser atau menghilangkan kolom | token/state mengambil lebar cell yang sama | belum ada renderer inventory | Planned / Gap |
 | Unavailable berbeda dari error dan data kosong | state cell eksplisit + token teks + warna | `SourceStatus` membedakan status Sources di `src/model.rs`; state inventory belum ada | Partially Implemented |
 | Sorting, filtering, focus, scrolling konsisten | aturan interaksi di dokumen ini | navigasi/focus/scroll Sources ada di `src/ui.rs`; filter inventory belum ada | Partially Implemented |
@@ -206,7 +275,7 @@ Test yang direncanakan mengikuti pola test renderer Ratatui yang sudah dipakai d
 - Perbandingan versi lintas ecosystem belum memiliki aturan universal; implementasi awal boleh memakai natural-text ordering dan harus mencatat batasannya.
 - Kunci filter dan toggle sort harus diselaraskan dengan halaman Sources ketika fitur filter ditambahkan ke Sources; saat ini Sources belum memiliki filter.
 - Horizontal scroll menambah state UI yang belum dimiliki `App`; detail implementasinya harus tetap terpisah dari vertical scroll.
-- Keputusan deduplikasi lintas source masih terbuka; kontrak saat ini mempertahankan satu row per `source_id + identifier`.
+- Keputusan deduplikasi lintas source masih terbuka; kontrak saat ini mempertahankan satu row per `source + identifier`.
 
 ## Evidence repository
 
