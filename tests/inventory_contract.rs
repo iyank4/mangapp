@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    cell::RefCell,
+    path::{Path, PathBuf},
+};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use mangap::{
@@ -22,6 +25,47 @@ impl CommandRunner for FakeRunner {
             Some("mas") => Err("mas list gagal".into()),
             _ => Err("unexpected command".into()),
         }
+    }
+}
+
+struct AllSourcesRunner {
+    calls: RefCell<Vec<(String, Vec<String>)>>,
+}
+
+impl AllSourcesRunner {
+    fn new() -> Self {
+        Self {
+            calls: RefCell::new(Vec::new()),
+        }
+    }
+}
+
+impl CommandRunner for AllSourcesRunner {
+    fn run(&self, executable: &Path, args: &[String]) -> Result<String, String> {
+        let name = executable
+            .file_name()
+            .and_then(|value| value.to_str())
+            .unwrap_or_default()
+            .to_owned();
+        self.calls.borrow_mut().push((name.clone(), args.to_vec()));
+        Ok(match (name.as_str(), args) {
+            ("cargo", _) => "ripgrep v14.1.1:\n    rg\n".into(),
+            ("brew", [_, flag, _]) if flag == "--formula" => "git 2.50.0\n".into(),
+            ("brew", _) => "visual-studio-code 1.99.0\n".into(),
+            ("mas", _) => "497799835 Pixelmator Pro (3.6.10)\n".into(),
+            ("pip3", _) => "requests==2.32.3\n".into(),
+            ("gem", _) => "rails (8.0.0)\n".into(),
+            ("uv", _) => "ruff v0.8.0\n".into(),
+            ("pipx", _) => "  package black 24.10.0, installed using Python 3.13.0\n".into(),
+            ("npm", _) | ("pnpm", _) | ("yarn", _) => "├── typescript@5.7.2\n".into(),
+            ("composer", _) => "vendor/package v1.2.3\n".into(),
+            ("conda", _) => "# packages in environment\nnumpy 2.1.0 py312_0\n".into(),
+            ("port", _) => "  wget @2.2.0_0 (active)\n".into(),
+            ("nix", _) => "Name: ripgrep\n".into(),
+            ("dart", _) | ("flutter", _) => "melos 6.3.0\n".into(),
+            ("go", _) => "\n\n".into(),
+            _ => return Err(format!("unexpected adapter command: {name} {args:?}")),
+        })
     }
 }
 
@@ -101,8 +145,10 @@ fn inventory_sorts_filters_and_numbers_visible_rows() {
         ],
     );
 
-    app.handle_key(key(KeyCode::Char('i')));
-    assert_eq!(app.selected_inventory_index(), Some(0));
+    app.handle_key(key(KeyCode::Down));
+    app.handle_key(key(KeyCode::Enter));
+    assert_eq!(app.inventory_source(), Some("homebrew"));
+    assert_eq!(app.selected_inventory_index(), Some(1));
     app.handle_key(key(KeyCode::Char('f')));
     for character in "homebrew".chars() {
         app.handle_key(key(KeyCode::Char(character)));
@@ -118,7 +164,7 @@ fn inventory_page_renders_fixed_columns_and_detail_fields() {
         vec![available(&source_registry()[0])],
         vec![record("cargo", "Ripgrep", "ripgrep")],
     );
-    app.handle_key(key(KeyCode::Char('i')));
+    app.handle_key(key(KeyCode::Enter));
     app.handle_key(key(KeyCode::Enter));
 
     let mut terminal = Terminal::new(TestBackend::new(140, 30)).expect("test terminal");
@@ -143,6 +189,7 @@ fn inventory_page_renders_fixed_columns_and_detail_fields() {
     ] {
         assert!(content.contains(header), "missing header: {header}");
     }
+    assert!(content.contains("Source: Cargo"));
     assert!(content.contains("Tanggal Install: 2026-01-02"));
     assert!(content.contains("Tanggal Update: 2026-02-03"));
     assert!(content.contains("Note: metadata dari fixture"));
@@ -154,7 +201,7 @@ fn narrow_inventory_keeps_columns_and_supports_horizontal_scroll() {
         vec![available(&source_registry()[0])],
         vec![record("cargo", "Ripgrep", "ripgrep")],
     );
-    app.handle_key(key(KeyCode::Char('i')));
+    app.handle_key(key(KeyCode::Enter));
     for _ in 0..20 {
         app.handle_key(key(KeyCode::Right));
     }
@@ -184,7 +231,7 @@ fn refresh_preserves_inventory_filter_and_selected_record() {
             record("cargo", "Beta", "beta"),
         ],
     );
-    app.handle_key(key(KeyCode::Char('i')));
+    app.handle_key(key(KeyCode::Enter));
     app.handle_key(key(KeyCode::Char('f')));
     for character in "beta".chars() {
         app.handle_key(key(KeyCode::Char(character)));
@@ -195,4 +242,107 @@ fn refresh_preserves_inventory_filter_and_selected_record() {
     app.replace_data(sources, vec![record("cargo", "Beta", "beta")]);
     assert_eq!(app.inventory_filter(), "beta");
     assert_eq!(app.selected_inventory_index(), Some(0));
+}
+
+#[test]
+fn every_registry_source_has_a_working_inventory_adapter() {
+    let sources = source_registry().iter().map(available).collect::<Vec<_>>();
+    let runner = AllSourcesRunner::new();
+    let records = collect_inventory_with_runner(&sources, &runner);
+
+    assert!(
+        records
+            .iter()
+            .all(|record| record.status != RecordStatus::Error)
+    );
+    assert!(records.iter().any(|record| record.source == "cargo"));
+    assert!(records.iter().any(|record| record.source == "conda"));
+    assert!(records.iter().any(|record| record.source == "macports"));
+    assert!(records.iter().any(|record| record.source == "nix"));
+
+    let called = runner
+        .calls
+        .borrow()
+        .iter()
+        .map(|(name, _)| name.clone())
+        .collect::<Vec<_>>();
+    for definition in source_registry() {
+        assert!(
+            called.iter().any(|name| name == definition.candidates[0]),
+            "missing adapter call for {}",
+            definition.id
+        );
+    }
+    let yarn_args = runner
+        .calls
+        .borrow()
+        .iter()
+        .find(|(name, _)| name == "yarn")
+        .map(|(_, args)| args.clone())
+        .expect("yarn adapter call");
+    assert_eq!(yarn_args, ["global", "list", "--depth=0"]);
+}
+
+#[test]
+fn disabled_sources_remain_visible_as_unavailable_inventory_status() {
+    let definition = &source_registry()[7];
+    let source = SourceSnapshot {
+        definition,
+        status: SourceStatus::Disabled {
+            candidates: definition
+                .candidates
+                .iter()
+                .map(|candidate| (*candidate).to_owned())
+                .collect(),
+        },
+    };
+
+    let records = collect_inventory_with_runner(&[source], &FakeRunner);
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0].source, "mas");
+    assert_eq!(records[0].status, RecordStatus::Unavailable);
+    assert_eq!(records[0].name.display(), "UNAVAILABLE");
+    assert!(records[0].note.display().contains("mas"));
+}
+
+#[test]
+fn inventory_renders_loading_and_unavailable_states_without_panicking() {
+    let definition = &source_registry()[7];
+    let unavailable = ApplicationRecord::new(
+        "mas",
+        CellValue::unavailable(),
+        CellValue::unavailable(),
+        CellValue::unavailable(),
+        RecordStatus::Unavailable,
+    );
+    let mut app = App::with_inventory(vec![available(definition)], vec![unavailable]);
+    app.handle_key(key(KeyCode::Enter));
+    app.begin_inventory_loading();
+
+    let mut terminal = Terminal::new(TestBackend::new(140, 30)).expect("test terminal");
+    terminal
+        .draw(|frame| render(frame, &app))
+        .expect("render loading state");
+    let loading: String = terminal
+        .backend()
+        .buffer()
+        .content()
+        .iter()
+        .map(|cell| cell.symbol())
+        .collect();
+    assert!(loading.contains("Memuat daftar aplikasi"));
+
+    let inventory = app.inventory().to_vec();
+    app.replace_data(vec![available(definition)], inventory);
+    terminal
+        .draw(|frame| render(frame, &app))
+        .expect("render unavailable state");
+    let unavailable_view: String = terminal
+        .backend()
+        .buffer()
+        .content()
+        .iter()
+        .map(|cell| cell.symbol())
+        .collect();
+    assert!(unavailable_view.contains("UNAVAILABLE"));
 }

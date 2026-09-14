@@ -29,13 +29,13 @@ cargo build --release
 - `↑`/`↓` atau `j`/`k`: navigasi.
 - `PageUp`/`PageDown` atau `Space`: berpindah halaman.
 - `Home`/`End`: ke awal/akhir.
-- `Enter`: tampilkan/sembunyikan detail.
-- `i`: buka halaman Application Inventory; `s`: kembali ke Sources.
-- `f`: aktifkan filter pada Inventory; `←`/`→` atau `h`/`l`: horizontal scroll Inventory pada terminal sempit.
+- Pada Sources, `Enter`: buka halaman Application Inventory sesuai source yang dipilih; `i`: tampilkan/sembunyikan detail source.
+- Pada Inventory, `Enter`: tampilkan/sembunyikan detail aplikasi; `s` atau `Esc`: kembali ke Sources; `←`/`→` atau `h`/`l`: horizontal scroll.
+- `f`: aktifkan filter pada Inventory.
 - `Tab`: berpindah fokus antara section Sources dan PATH.
 - `p`: tampilkan/sembunyikan daftar folder dari `PATH` di bawah Detail dan fokus ke PATH.
 - `↑`/`↓` atau `j`/`k`: scroll daftar folder `PATH` saat fokus berada di section PATH.
-- `r`: deteksi ulang sumber.
+- `r`: deteksi ulang sumber dan mengambil ulang inventory aplikasi.
 - `q` atau `Esc`: keluar.
 
 Section `PATH directories` berada di bawah Detail, default hidden, dan mempertahankan urutan resolve yang diberikan sistem melalui environment variable `PATH`, termasuk duplikat; path tidak diurutkan alfabetis. Daftarnya memiliki kolom `No.`, `PATH`, `SOURCE HINT`, dan `NOTE / CATATAN`. Kolom `SOURCE HINT` diisi jika path dapat dicocokkan dengan `/etc/paths`, `/etc/paths.d/*`, atau path literal pada file shell user; selain itu dibiarkan kosong. Kolom `NOTE / CATATAN` berisi `Warning: path duplikat` atau `Error: folder tidak ada` jika relevan. `Tab` akan membukanya saat fokus berpindah dari Sources; section aktif diberi label `[FOCUS]`, dan row PATH aktif diberi reverse highlight. Tingginya dibatasi maksimal 50% tinggi terminal dan dapat di-scroll dengan `↑`/`↓` atau `j`/`k` saat fokus berada di section PATH; viewport mengikuti row aktif.
@@ -94,6 +94,8 @@ Detector tidak menjalankan shell atau mengevaluasi command sebagai string. Detec
 - [Dokumentasi MangApp](../README.md)
 - [Kontrak Application Inventory](../reference/application-inventory-contract.md)
 - [History: MangApp Sources](../history/2026-09-07-mangapp-sources.md)
+
+Pengambilan inventory berjalan di background setelah aplikasi dibuka dan saat refresh. Halaman Applications menampilkan `LOADING` selama proses, `EMPTY` bila source sukses tetapi tidak mengembalikan record, `UNAVAILABLE` untuk source yang `DISABLED` atau field yang tidak disediakan, dan `ERROR` bila collector gagal.
 
 Status repository saat ini:
 

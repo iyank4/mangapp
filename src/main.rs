@@ -1,4 +1,9 @@
-use std::{error::Error, io, time::Duration};
+use std::{
+    error::Error,
+    io,
+    sync::mpsc::{self, Receiver},
+    time::Duration,
+};
 
 use crossterm::{
     event::{self, Event},
@@ -31,13 +36,15 @@ fn collect_sources() -> Vec<mangap::model::SourceSnapshot> {
         .collect()
 }
 
-fn collect_data() -> (
-    Vec<mangap::model::SourceSnapshot>,
-    Vec<mangap::model::ApplicationRecord>,
-) {
-    let sources = collect_sources();
-    let inventory = collect_inventory(&sources);
-    (sources, inventory)
+fn collect_inventory_async(
+    sources: Vec<mangap::model::SourceSnapshot>,
+) -> Receiver<Vec<mangap::model::ApplicationRecord>> {
+    let (sender, receiver) = mpsc::channel();
+    std::thread::spawn(move || {
+        let inventory = collect_inventory(&sources);
+        let _ = sender.send(inventory);
+    });
+    receiver
 }
 
 fn run() -> Result<(), Box<dyn Error>> {
@@ -47,11 +54,22 @@ fn run() -> Result<(), Box<dyn Error>> {
     execute!(stdout, EnterAlternateScreen)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
-    let (sources, inventory) = collect_data();
-    let mut app =
-        App::with_path_entries_and_inventory(sources, inventory, path_entries_from_environment());
+    let mut sources = collect_sources();
+    let mut app = App::with_path_entries_and_inventory(
+        sources.clone(),
+        Vec::new(),
+        path_entries_from_environment(),
+    );
+    app.begin_inventory_loading();
+    let mut inventory_receiver = Some(collect_inventory_async(sources.clone()));
 
     loop {
+        if let Some(receiver) = inventory_receiver.as_ref()
+            && let Ok(inventory) = receiver.try_recv()
+        {
+            app.replace_data(sources.clone(), inventory);
+            inventory_receiver = None;
+        }
         terminal.draw(|frame| render(frame, &app))?;
         if !event::poll(Duration::from_millis(250))? {
             continue;
@@ -62,8 +80,10 @@ fn run() -> Result<(), Box<dyn Error>> {
         match app.handle_key(key) {
             AppAction::None => {}
             AppAction::Refresh => {
-                let (sources, inventory) = collect_data();
-                app.replace_data(sources, inventory);
+                sources = collect_sources();
+                app.replace_data(sources.clone(), Vec::new());
+                app.begin_inventory_loading();
+                inventory_receiver = Some(collect_inventory_async(sources.clone()));
             }
             AppAction::Quit => break,
         }

@@ -49,7 +49,13 @@ pub fn collect_inventory_with_runner(
 fn collect_source(snapshot: &SourceSnapshot, runner: &dyn CommandRunner) -> Vec<ApplicationRecord> {
     let source = snapshot.definition.id;
     match &snapshot.status {
-        SourceStatus::Disabled { .. } => Vec::new(),
+        SourceStatus::Disabled { candidates } => vec![unavailable_record(
+            source,
+            &format!(
+                "inventory tidak tersedia: {} tidak ditemukan",
+                candidates.join(" / ")
+            ),
+        )],
         SourceStatus::Error { message } => vec![error_record(source, message)],
         SourceStatus::Available { executable } => {
             let result = match source {
@@ -68,12 +74,19 @@ fn collect_source(snapshot: &SourceSnapshot, runner: &dyn CommandRunner) -> Vec<
                 }
                 "uv" => run_and_parse(runner, executable, source, &["tool", "list"], parse_uv),
                 "pipx" => run_and_parse(runner, executable, source, &["list"], parse_pipx),
-                "npm" | "pnpm" | "yarn" => run_and_parse(
+                "npm" | "pnpm" => run_and_parse(
                     runner,
                     executable,
                     source,
                     &["list", "--global", "--depth=0"],
                     parse_node,
+                ),
+                "yarn" => run_and_parse(
+                    runner,
+                    executable,
+                    source,
+                    &["global", "list", "--depth=0"],
+                    parse_yarn,
                 ),
                 "composer" => run_and_parse(
                     runner,
@@ -82,9 +95,11 @@ fn collect_source(snapshot: &SourceSnapshot, runner: &dyn CommandRunner) -> Vec<
                     &["global", "show"],
                     parse_composer,
                 ),
-                "conda" | "macports" | "nix" => {
-                    run_and_parse(runner, executable, source, &[], parse_generic)
+                "conda" => run_and_parse(runner, executable, source, &["list"], parse_conda),
+                "macports" => {
+                    run_and_parse(runner, executable, source, &["installed"], parse_macports)
                 }
+                "nix" => run_and_parse(runner, executable, source, &["profile", "list"], parse_nix),
                 "dart" => run_and_parse(
                     runner,
                     executable,
@@ -99,7 +114,7 @@ fn collect_source(snapshot: &SourceSnapshot, runner: &dyn CommandRunner) -> Vec<
                     &["pub", "global", "list"],
                     parse_generic,
                 ),
-                "go" => collect_go(executable),
+                "go" => collect_go(runner, executable),
                 _ => Ok(vec![unavailable_record(
                     source,
                     "collector source belum tersedia",
@@ -161,22 +176,26 @@ fn collect_python_pip(
     Ok(parse_freeze("python-pip", &output))
 }
 
-fn collect_go(executable: &Path) -> Result<Vec<ApplicationRecord>, String> {
-    let output = Command::new(executable)
-        .args(["env", "GOBIN", "GOPATH"])
-        .output()
-        .map_err(|error| format!("gagal membaca konfigurasi Go: {error}"))?;
-    if !output.status.success() {
-        return Err("konfigurasi Go tidak dapat dibaca".into());
-    }
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let values = stdout.lines().map(str::trim).collect::<Vec<_>>();
+fn collect_go(
+    runner: &dyn CommandRunner,
+    executable: &Path,
+) -> Result<Vec<ApplicationRecord>, String> {
+    let args = ["env", "GOBIN", "GOPATH"]
+        .into_iter()
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
+    let output = runner.run(executable, &args)?;
+    let values = output.lines().map(str::trim).collect::<Vec<_>>();
     let bin_dir = values
         .first()
         .filter(|value| !value.is_empty())
         .map(PathBuf::from)
-        .or_else(|| values.get(1).map(|value| PathBuf::from(value).join("bin")));
+        .or_else(|| {
+            values
+                .get(1)
+                .filter(|value| !value.is_empty())
+                .map(|value| PathBuf::from(value).join("bin"))
+        });
     let Some(bin_dir) = bin_dir else {
         return Ok(Vec::new());
     };
@@ -265,7 +284,11 @@ fn parse_mas(_executable: &str, output: &str) -> Vec<ApplicationRecord> {
                 "mas",
                 name,
                 identifier,
-                CellValue::value(version),
+                if version == "UNKNOWN" {
+                    CellValue::empty()
+                } else {
+                    CellValue::value(version)
+                },
             ))
         })
         .collect()
@@ -318,6 +341,30 @@ fn parse_node(source: &str, output: &str) -> Vec<ApplicationRecord> {
     parse_package_lines(source, output)
 }
 
+fn parse_yarn(_executable: &str, output: &str) -> Vec<ApplicationRecord> {
+    output
+        .lines()
+        .filter_map(|line| {
+            let line = line.trim();
+            let token = line
+                .strip_prefix("info ")
+                .and_then(|value| value.split('"').nth(1))
+                .or_else(|| {
+                    line.strip_prefix(['├', '└'])
+                        .map(|value| value.trim_start_matches(['─', ' ']))
+                        .and_then(|value| value.split_whitespace().next())
+                })?;
+            let (identifier, version) = split_at_version(token);
+            Some(available_record(
+                "yarn",
+                identifier,
+                identifier,
+                version.map_or_else(CellValue::empty, CellValue::value),
+            ))
+        })
+        .collect()
+}
+
 fn parse_composer(_executable: &str, output: &str) -> Vec<ApplicationRecord> {
     output
         .lines()
@@ -342,16 +389,116 @@ fn parse_generic(source: &str, output: &str) -> Vec<ApplicationRecord> {
     parse_package_lines(source, output)
 }
 
+fn parse_conda(_executable: &str, output: &str) -> Vec<ApplicationRecord> {
+    output
+        .lines()
+        .filter_map(|line| {
+            let line = line.trim();
+            if line.is_empty() || line.starts_with('#') {
+                return None;
+            }
+            let mut fields = line.split_whitespace();
+            let identifier = fields.next()?;
+            let version = fields.next().unwrap_or_default();
+            if identifier == "Name"
+                || identifier == "#"
+                || identifier.chars().all(|character| character == '-')
+            {
+                return None;
+            }
+            Some(available_record(
+                "conda",
+                identifier,
+                identifier,
+                if version.is_empty() {
+                    CellValue::empty()
+                } else {
+                    CellValue::value(version)
+                },
+            ))
+        })
+        .collect()
+}
+
+fn parse_macports(_executable: &str, output: &str) -> Vec<ApplicationRecord> {
+    output
+        .lines()
+        .filter_map(|line| {
+            let line = line.trim();
+            let line = line.strip_prefix(" ").unwrap_or(line);
+            let mut fields = line.split_whitespace();
+            let identifier = fields.next()?;
+            if identifier == "The" || identifier == "No" || identifier == "Currently" {
+                return None;
+            }
+            let version = fields
+                .find_map(|field| field.strip_prefix('@'))
+                .unwrap_or_default();
+            Some(available_record(
+                "macports",
+                identifier,
+                identifier,
+                if version.is_empty() {
+                    CellValue::empty()
+                } else {
+                    CellValue::value(version)
+                },
+            ))
+        })
+        .collect()
+}
+
+fn parse_nix(_executable: &str, output: &str) -> Vec<ApplicationRecord> {
+    output
+        .lines()
+        .filter_map(|line| {
+            let line = line.trim();
+            let name = line
+                .strip_prefix("Name:")
+                .map(str::trim)
+                .or_else(|| line.strip_prefix("- ").map(str::trim))?;
+            if name.is_empty() {
+                return None;
+            }
+            let version = line
+                .split_once("Version:")
+                .map(|(_, version)| version.trim())
+                .unwrap_or_default();
+            Some(available_record(
+                "nix",
+                name,
+                name,
+                if version.is_empty() {
+                    CellValue::empty()
+                } else {
+                    CellValue::value(version)
+                },
+            ))
+        })
+        .collect()
+}
+
 fn parse_package_lines(source: &str, output: &str) -> Vec<ApplicationRecord> {
     output
         .lines()
         .filter_map(|line| {
-            let line = line.trim().trim_start_matches(['├', '└', '─', ' ']);
-            let token = line.split_whitespace().next()?;
-            let (identifier, version) = split_at_version(token);
-            if identifier.is_empty() || identifier == "#" || identifier == "info" {
+            let line = line.trim().trim_start_matches(['├', '└', '─', '│', ' ']);
+            let mut fields = line.split_whitespace();
+            let first = fields.next()?;
+            if first.is_empty()
+                || first.starts_with('/')
+                || matches!(first, "#" | "info" | "Package")
+            {
                 return None;
             }
+            let (identifier, inline_version) = if first == "package" {
+                let identifier = fields.next()?;
+                split_at_version(identifier)
+            } else {
+                split_at_version(first)
+            };
+            let version = inline_version
+                .or_else(|| fields.clone().find_map(|field| normalized_version(field)));
             Some(available_record(
                 source,
                 identifier,
@@ -360,6 +507,17 @@ fn parse_package_lines(source: &str, output: &str) -> Vec<ApplicationRecord> {
             ))
         })
         .collect()
+}
+
+fn normalized_version(value: &str) -> Option<&str> {
+    let value = value.trim_matches([',', '(', ')']);
+    let value = value.strip_prefix('v').unwrap_or(value);
+    (!value.is_empty()
+        && value
+            .chars()
+            .next()
+            .is_some_and(|character| character.is_ascii_digit()))
+    .then_some(value)
 }
 
 fn split_at_version(value: &str) -> (&str, Option<&str>) {

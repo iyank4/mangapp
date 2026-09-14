@@ -48,9 +48,11 @@ pub struct App {
     selectable_indices: Vec<usize>,
     selected_position: Option<usize>,
     inventory_selected_position: Option<usize>,
+    inventory_source_filter: Option<String>,
     inventory_filter: String,
     inventory_filter_active: bool,
     inventory_horizontal_scroll: u16,
+    inventory_loading: bool,
     detail_visible: bool,
     path_visible: bool,
     path_scroll: usize,
@@ -139,9 +141,11 @@ impl App {
             selectable_indices,
             selected_position,
             inventory_selected_position: None,
+            inventory_source_filter: None,
             inventory_filter: String::new(),
             inventory_filter_active: false,
             inventory_horizontal_scroll: 0,
+            inventory_loading: false,
             detail_visible: false,
             path_visible: false,
             path_scroll: 0,
@@ -172,12 +176,20 @@ impl App {
         &self.inventory_filter
     }
 
+    pub fn inventory_source(&self) -> Option<&str> {
+        self.inventory_source_filter.as_deref()
+    }
+
     pub fn inventory_filter_active(&self) -> bool {
         self.inventory_filter_active
     }
 
     pub fn inventory_horizontal_scroll(&self) -> u16 {
         self.inventory_horizontal_scroll
+    }
+
+    pub fn inventory_loading(&self) -> bool {
+        self.inventory_loading
     }
 
     pub fn page(&self) -> AppPage {
@@ -222,6 +234,7 @@ impl App {
         let page = self.page;
         let focused_section = self.focused_section;
         let detail_visible = self.detail_visible;
+        let inventory_source_filter = self.inventory_source_filter.clone();
         let inventory_filter = self.inventory_filter.clone();
         let inventory_horizontal_scroll = self.inventory_horizontal_scroll;
         let selected_record_key = self
@@ -237,8 +250,10 @@ impl App {
         self.page = page;
         self.focused_section = focused_section;
         self.detail_visible = detail_visible;
+        self.inventory_source_filter = inventory_source_filter;
         self.inventory_filter = inventory_filter;
         self.inventory_horizontal_scroll = inventory_horizontal_scroll;
+        self.inventory_loading = false;
         self.inventory_selected_position = selected_record_key
             .and_then(|key| {
                 self.filtered_inventory_indices()
@@ -249,17 +264,41 @@ impl App {
         self.clamp_inventory_selection();
     }
 
+    pub fn begin_inventory_loading(&mut self) {
+        self.inventory_loading = true;
+        self.inventory_filter_active = false;
+        self.inventory_selected_position = None;
+        self.detail_visible = false;
+    }
+
     pub fn handle_key(&mut self, key: KeyEvent) -> AppAction {
         if self.inventory_filter_active {
             return self.handle_filter_key(key);
         }
 
         match key.code {
+            KeyCode::Esc if self.focused_section == SectionFocus::Inventory => {
+                self.page = AppPage::Sources;
+                self.focused_section = SectionFocus::Sources;
+                self.detail_visible = false;
+                AppAction::None
+            }
             KeyCode::Char('q') | KeyCode::Char('Q') | KeyCode::Esc => AppAction::Quit,
             KeyCode::Char('r') | KeyCode::Char('R') => AppAction::Refresh,
-            KeyCode::Char('i') | KeyCode::Char('I') => {
+            KeyCode::Char('i') | KeyCode::Char('I')
+                if self.focused_section == SectionFocus::Sources =>
+            {
+                self.detail_visible = !self.detail_visible;
+                AppAction::None
+            }
+            KeyCode::Enter if self.focused_section == SectionFocus::Sources => {
+                let selected_source = self
+                    .selected_index()
+                    .and_then(|index| self.sources.get(index))
+                    .map(|snapshot| snapshot.definition.id.to_owned());
                 self.page = AppPage::Inventory;
                 self.focused_section = SectionFocus::Inventory;
+                self.inventory_source_filter = selected_source;
                 self.detail_visible = false;
                 if self.inventory_selected_position.is_none()
                     && !self.filtered_inventory_indices().is_empty()
@@ -274,7 +313,9 @@ impl App {
                 self.detail_visible = false;
                 AppAction::None
             }
-            KeyCode::Char('f') | KeyCode::Char('F') if self.page == AppPage::Inventory => {
+            KeyCode::Char('f') | KeyCode::Char('F')
+                if self.page == AppPage::Inventory && !self.inventory_loading =>
+            {
                 self.inventory_filter_active = true;
                 AppAction::None
             }
@@ -321,10 +362,7 @@ impl App {
                 self.path_scroll = self.path_scroll.saturating_sub(1);
                 AppAction::None
             }
-            KeyCode::Enter
-                if self.focused_section == SectionFocus::Sources
-                    || self.focused_section == SectionFocus::Inventory =>
-            {
+            KeyCode::Enter if self.focused_section == SectionFocus::Inventory => {
                 self.detail_visible = !self.detail_visible;
                 AppAction::None
             }
@@ -466,17 +504,20 @@ impl App {
             .iter()
             .enumerate()
             .filter(|(_, record)| {
-                query.is_empty()
-                    || [
-                        record.name.searchable(),
-                        record.version.searchable(),
-                        record.source.to_lowercase(),
-                        record_status_label(&record.status).to_lowercase(),
-                        record.identifier.searchable(),
-                        record.location.searchable(),
-                    ]
-                    .iter()
-                    .any(|value| value.contains(&query))
+                self.inventory_source_filter
+                    .as_deref()
+                    .is_none_or(|source| source == record.source)
+                    && (query.is_empty()
+                        || [
+                            record.name.searchable(),
+                            record.version.searchable(),
+                            record.source.to_lowercase(),
+                            record_status_label(&record.status).to_lowercase(),
+                            record.identifier.searchable(),
+                            record.location.searchable(),
+                        ]
+                        .iter()
+                        .any(|value| value.contains(&query)))
             })
             .map(|(index, _)| index)
             .collect()
@@ -600,10 +641,10 @@ pub fn render(frame: &mut Frame, app: &App) {
                 if app.inventory_filter_active {
                     "Ketik filter  Enter selesai  Esc batal  Backspace hapus"
                 } else {
-                    "↑/↓ j/k navigasi  PgUp/PgDn halaman  Enter detail  f filter  s Sources  Tab PATH  r refresh  q/Esc keluar"
+                    "↑/↓ j/k navigasi  PgUp/PgDn halaman  Enter detail  s/Esc Sources  f filter  Tab PATH  r refresh  q keluar"
                 }
             } else {
-                "↑/↓ j/k navigasi  PgUp/PgDn halaman  Enter detail  i Inventory  Tab PATH  p PATH  r refresh  q/Esc keluar"
+                "↑/↓ j/k navigasi  PgUp/PgDn halaman  Enter Inventory  i detail  Tab PATH  p PATH  r refresh  q/Esc keluar"
             },
         ),
         areas[4],
@@ -701,18 +742,22 @@ fn render_inventory(
     table_area: ratatui::layout::Rect,
     detail_area: ratatui::layout::Rect,
 ) {
+    let source_label = app.inventory_source().and_then(|source| {
+        source_registry()
+            .iter()
+            .find(|definition| definition.id == source)
+            .map(|definition| definition.name)
+    });
+    let title_prefix = source_label.map_or_else(
+        || "MangApp — Application Inventory".to_owned(),
+        |source| format!("MangApp — Application Inventory  |  Source: {source}"),
+    );
     let title_text = if app.inventory_filter().is_empty() {
-        "MangApp — Application Inventory".to_owned()
+        title_prefix
     } else if app.inventory_filter_active() {
-        format!(
-            "MangApp — Application Inventory  |  Filter: {}_",
-            app.inventory_filter()
-        )
+        format!("{title_prefix}  |  Filter: {}_", app.inventory_filter())
     } else {
-        format!(
-            "MangApp — Application Inventory  |  Filter: {}",
-            app.inventory_filter()
-        )
+        format!("{title_prefix}  |  Filter: {}", app.inventory_filter())
     };
     let title = Paragraph::new(Line::from(vec![Span::styled(
         title_text,
@@ -735,7 +780,17 @@ fn render_inventory(
     .style(Style::default().add_modifier(Modifier::BOLD));
 
     let indices = app.filtered_inventory_indices();
-    let rows = if indices.is_empty() {
+    let rows = if app.inventory_loading() {
+        vec![Row::new([
+            Cell::from(""),
+            Cell::from("Memuat daftar aplikasi..."),
+            Cell::from(""),
+            Cell::from("LOADING"),
+            Cell::from(""),
+            Cell::from(""),
+            Cell::from(""),
+        ])]
+    } else if indices.is_empty() {
         vec![Row::new([
             Cell::from(""),
             Cell::from(if app.inventory().is_empty() {
@@ -800,7 +855,7 @@ fn render_inventory(
     .row_highlight_style(Style::default().add_modifier(Modifier::REVERSED))
     .highlight_symbol("› ");
     let mut table_state = TableState::default();
-    if !indices.is_empty() {
+    if !indices.is_empty() && !app.inventory_loading() {
         table_state.select(app.inventory_selected_position);
     }
     render_inventory_table(
@@ -811,11 +866,20 @@ fn render_inventory(
         app.inventory_horizontal_scroll(),
     );
 
-    let detail = app
-        .selected_inventory_index()
-        .and_then(|index| app.inventory().get(index))
-        .map(application_detail_line)
-        .unwrap_or_else(|| "Pilih aplikasi untuk melihat detail.".into());
+    let detail = if app.inventory_loading() {
+        "Memuat daftar aplikasi dari setiap source...".into()
+    } else {
+        app.selected_inventory_index()
+            .and_then(|index| app.inventory().get(index))
+            .map(application_detail_line)
+            .unwrap_or_else(|| {
+                if app.inventory().is_empty() {
+                    "Belum ada aplikasi yang terdeteksi.".into()
+                } else {
+                    "Pilih aplikasi untuk melihat detail.".into()
+                }
+            })
+    };
     frame.render_widget(
         Paragraph::new(detail).block(Block::default().borders(Borders::ALL).title(" Detail ")),
         detail_area,

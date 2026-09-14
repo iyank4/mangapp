@@ -72,10 +72,25 @@ fn app_navigates_enabled_rows_and_handles_actions() {
     app.handle_key(key(KeyCode::PageUp));
     assert_eq!(selected_source_name(&app), Some("Cargo"));
 
-    assert_eq!(app.handle_key(key(KeyCode::Enter)), AppAction::None);
+    assert_eq!(app.handle_key(key(KeyCode::Char('i'))), AppAction::None);
     assert!(app.detail_visible());
+    assert_eq!(app.handle_key(key(KeyCode::Char('i'))), AppAction::None);
+    assert!(!app.detail_visible());
+    assert_eq!(app.handle_key(key(KeyCode::Enter)), AppAction::None);
+    assert_eq!(app.page(), mangap::ui::AppPage::Inventory);
     assert_eq!(app.handle_key(key(KeyCode::Char('r'))), AppAction::Refresh);
     assert_eq!(app.handle_key(key(KeyCode::Char('q'))), AppAction::Quit);
+}
+
+#[test]
+fn escape_returns_from_inventory_to_sources() {
+    let mut app = App::new(snapshots());
+
+    app.handle_key(key(KeyCode::Enter));
+    assert_eq!(app.page(), mangap::ui::AppPage::Inventory);
+    assert_eq!(app.handle_key(key(KeyCode::Esc)), AppAction::None);
+    assert_eq!(app.page(), mangap::ui::AppPage::Sources);
+    assert_eq!(app.focused_section(), SectionFocus::Sources);
     assert_eq!(app.handle_key(key(KeyCode::Esc)), AppAction::Quit);
 }
 
@@ -178,7 +193,7 @@ fn sources_page_renders_detail_and_error_styles() {
         message: "probe gagal".into(),
     };
     let mut app = App::new(sources);
-    app.handle_key(key(KeyCode::Enter));
+    app.handle_key(key(KeyCode::Char('i')));
 
     let backend = TestBackend::new(120, 30);
     let mut terminal = Terminal::new(backend).expect("test terminal");
@@ -417,7 +432,7 @@ fn section_focus_routes_section_specific_controls() {
 
     app.handle_key(key(KeyCode::Down));
     assert_eq!(app.path_scroll(), 0);
-    app.handle_key(key(KeyCode::Enter));
+    app.handle_key(key(KeyCode::Char('i')));
     assert!(app.detail_visible());
 
     app.handle_key(key(KeyCode::Tab));

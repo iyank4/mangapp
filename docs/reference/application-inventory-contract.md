@@ -202,6 +202,8 @@ Acceptance test harus memeriksa terminal lebar dan sempit untuk memastikan separ
 
 Application Inventory menggunakan model interaksi yang sama dengan Sources: selection row, panel detail, fokus section, refresh, dan scrolling berbasis viewport.
 
+Pada section Sources, `Enter` membuka halaman Application Inventory yang dibatasi pada source terpilih dan `i` membuka/menutup detail source. Pada section Application Inventory, `Enter` membuka/menutup detail record dan `s` atau `Esc` kembali ke Sources. Horizontal scroll Inventory menggunakan `←`/`→` atau `h`/`l`.
+
 ### Sorting
 
 - Urutan default: `Application` ascending, case-insensitive.
@@ -243,6 +245,8 @@ Application Inventory menggunakan model interaksi yang sama dengan Sources: sele
 | Tidak ada record setelah filter | header tetap tampil dan empty-state jelas | selection kosong; clear filter tersedia |
 
 Error pada satu source tidak boleh menghilangkan record/source lain. Detail error tidak boleh ditampilkan sebagai `DISABLED`, karena `DISABLED` adalah status katalog Sources untuk command yang tidak ditemukan dan bukan status data inventory.
+
+Source dengan status `DISABLED` tidak menjalankan command dan tetap menghasilkan satu record status `UNAVAILABLE` dengan note yang menjelaskan command kandidat yang tidak ditemukan. Dengan begitu, setiap source tetap memiliki representasi pada halaman Applications. State `LOADING` hanya digunakan oleh UI selama collection background berlangsung dan bukan nilai `RecordStatus` yang persisten.
 
 ## Acceptance dan traceability
 
