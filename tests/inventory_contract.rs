@@ -5,7 +5,7 @@ use std::{
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use mangap::{
-    inventory::{CommandRunner, collect_inventory_with_runner},
+    inventory::{CommandRunner, collect_inventory_with_runner, upgrade_inventory_with_runner},
     model::{ApplicationRecord, CellValue, RecordStatus, SourceSnapshot, SourceStatus},
     registry::source_registry,
     ui::{App, render},
@@ -17,7 +17,13 @@ struct FakeRunner;
 impl CommandRunner for FakeRunner {
     fn run(&self, executable: &Path, args: &[String]) -> Result<String, String> {
         match executable.file_name().and_then(|name| name.to_str()) {
+            Some("cargo") if args.first().map(String::as_str) == Some("search") => {
+                Ok("ripgrep = \"14.2.0\"    # fast search tool\n".into())
+            }
             Some("cargo") => Ok("ripgrep v14.1.1:\n    rg\n\nbat v0.25.0:\n    bat\n".into()),
+            Some("brew") if args.first().map(String::as_str) == Some("outdated") => {
+                Ok(r#"{"formulae":[{"name":"git","current_version":"2.51.0"}],"casks":[]}"#.into())
+            }
             Some("brew") if args.get(1).map(String::as_str) == Some("--formula") => {
                 Ok("git 2.50.0\n".into())
             }
@@ -91,6 +97,7 @@ fn record(source: &str, name: &str, identifier: &str) -> ApplicationRecord {
         RecordStatus::Available,
     );
     record.location = CellValue::value("/Applications/Example.app");
+    record.available_version = CellValue::value("1.3.0");
     record.installed_at = CellValue::value("2026-01-02");
     record.updated_at = CellValue::value("2026-02-03");
     record.note = CellValue::value("metadata dari fixture");
@@ -109,8 +116,10 @@ fn collectors_normalize_records_and_keep_source_in_record_key() {
     assert_eq!(records[0].source, "cargo");
     assert_eq!(records[0].identifier.display(), "ripgrep");
     assert_eq!(records[0].version.display(), "14.1.1");
+    assert_eq!(records[0].available_version.display(), "14.2.0");
     assert_eq!(records[0].record_key, "cargo:ripgrep");
     assert_eq!(records[2].source, "homebrew");
+    assert_eq!(records[2].available_version.display(), "2.51.0");
     assert_eq!(records[3].source, "homebrew");
 }
 
@@ -182,6 +191,7 @@ fn inventory_page_renders_fixed_columns_and_detail_fields() {
     for header in [
         "Aplikasi",
         "Versi",
+        "Versi Baru",
         "Sumber",
         "Status",
         "Identifier",
@@ -192,6 +202,7 @@ fn inventory_page_renders_fixed_columns_and_detail_fields() {
     assert!(content.contains("Source: Cargo"));
     assert!(content.contains("Aplikasi       : Ripgrep"));
     assert!(content.contains("Versi          : 1.2.3 (Build 4)"));
+    assert!(content.contains("Versi Baru     : 1.3.0"));
     assert!(content.contains("Sumber         : cargo"));
     assert!(content.contains("Status         : AVAILABLE"));
     assert!(content.contains("Tanggal Install: 2026-01-02"));
@@ -334,6 +345,33 @@ fn every_registry_source_has_a_working_inventory_adapter() {
         .map(|(_, args)| args.clone())
         .expect("yarn adapter call");
     assert_eq!(yarn_args, ["global", "list", "--depth=0"]);
+}
+
+#[test]
+fn upgrade_uses_batch_commands_and_upgrades_mas_one_by_one() {
+    let runner = AllSourcesRunner::new();
+    let cargo = available(&source_registry()[0]);
+    upgrade_inventory_with_runner(&cargo, &[record("cargo", "Ripgrep", "ripgrep")], &runner)
+        .expect("upgrade cargo");
+
+    let mas = available(&source_registry()[7]);
+    let mas_records = vec![
+        record("mas", "Pixelmator Pro", "497799835"),
+        record("mas", "Xcode", "497799835-2"),
+    ];
+    upgrade_inventory_with_runner(&mas, &mas_records, &runner).expect("upgrade mas");
+
+    let calls = runner.calls.borrow();
+    assert!(
+        calls
+            .iter()
+            .any(|(name, args)| { name == "cargo" && args == &["install", "--force", "ripgrep"] })
+    );
+    let mas_calls = calls
+        .iter()
+        .filter(|(name, args)| name == "mas" && args.first().map(String::as_str) == Some("upgrade"))
+        .count();
+    assert_eq!(mas_calls, 2);
 }
 
 #[test]

@@ -20,11 +20,13 @@
 
 Semua source yang didukung selalu ditampilkan. Source yang command-nya tidak tersedia di sistem tetap terlihat sebagai `DISABLED`, sehingga user dapat membedakan antara source yang tidak terpasang dan source yang tidak didukung.
 
-Kontrak layout dan data untuk Application Inventory tersedia di [Kontrak Application Inventory](docs/reference/application-inventory-contract.md). Dari Sources, tekan `Enter` untuk membuka Inventory sesuai source yang dipilih atau `i` untuk menampilkan detail source; gunakan `f` untuk filter dan `s` atau `Esc` untuk kembali ke Sources.
+Kontrak layout dan data untuk Application Inventory tersedia di [Kontrak Application Inventory](docs/reference/application-inventory-contract.md). Dari Sources, tekan `Enter` untuk membuka Inventory sesuai source yang dipilih atau `i` untuk menampilkan detail source; gunakan `f` untuk filter, `u` untuk meng-upgrade semua aplikasi pada source aktif, dan `s` atau `Esc` untuk kembali ke Sources.
 
 Tabel Sources memiliki kolom `No.` untuk nomor urut visual. Sumber yang enabled ditampilkan lebih dulu, lalu sumber `DISABLED`; masing-masing kelompok tetap diurutkan secara alfabetis.
 
 Halaman Applications menampilkan status `UNAVAILABLE` untuk source yang `DISABLED`, sehingga source yang belum terpasang tetap dapat ditinjau tanpa menggagalkan inventory source lain. Saat pengambilan inventory berlangsung, halaman menampilkan state `LOADING`; jika tidak ada hasil, tabel menampilkan empty state yang jelas.
+
+Kolom `Versi Baru` menampilkan versi terbaru yang tersedia melalui pengecekan native tiap source. Jika aplikasi sudah mutakhir atau source tidak menyediakan metadata update, nilainya ditampilkan sebagai `N/A`; jika pemeriksaan gagal, tampil `UNAVAILABLE`. Field yang sama juga tersedia pada panel detail aplikasi.
 
 ## Sumber yang didukung (alfabetis)
 

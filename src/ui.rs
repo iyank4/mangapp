@@ -24,6 +24,7 @@ use crate::registry::source_registry;
 pub enum AppAction {
     None,
     Refresh,
+    Upgrade,
     Quit,
 }
 
@@ -53,6 +54,7 @@ pub struct App {
     inventory_filter_active: bool,
     inventory_horizontal_scroll: u16,
     inventory_loading: bool,
+    inventory_log: Vec<String>,
     detail_visible: bool,
     path_visible: bool,
     path_scroll: usize,
@@ -146,6 +148,7 @@ impl App {
             inventory_filter_active: false,
             inventory_horizontal_scroll: 0,
             inventory_loading: false,
+            inventory_log: Vec::new(),
             detail_visible: false,
             path_visible: false,
             path_scroll: 0,
@@ -254,6 +257,7 @@ impl App {
         self.inventory_filter = inventory_filter;
         self.inventory_horizontal_scroll = inventory_horizontal_scroll;
         self.inventory_loading = false;
+        self.inventory_log.clear();
         self.inventory_selected_position = selected_record_key
             .and_then(|key| {
                 self.filtered_inventory_indices()
@@ -266,9 +270,19 @@ impl App {
 
     pub fn begin_inventory_loading(&mut self) {
         self.inventory_loading = true;
+        self.inventory_log.clear();
         self.inventory_filter_active = false;
         self.inventory_selected_position = None;
         self.detail_visible = false;
+    }
+
+    pub fn push_inventory_log(&mut self, message: impl Into<String>) {
+        const MAX_LOG_LINES: usize = 100;
+        self.inventory_log.push(message.into());
+        if self.inventory_log.len() > MAX_LOG_LINES {
+            let excess = self.inventory_log.len() - MAX_LOG_LINES;
+            self.inventory_log.drain(..excess);
+        }
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> AppAction {
@@ -285,6 +299,11 @@ impl App {
             }
             KeyCode::Char('q') | KeyCode::Char('Q') | KeyCode::Esc => AppAction::Quit,
             KeyCode::Char('r') | KeyCode::Char('R') => AppAction::Refresh,
+            KeyCode::Char('u') | KeyCode::Char('U')
+                if self.page == AppPage::Inventory && !self.inventory_loading =>
+            {
+                AppAction::Upgrade
+            }
             KeyCode::Char('i') | KeyCode::Char('I')
                 if self.focused_section == SectionFocus::Sources =>
             {
@@ -508,6 +527,7 @@ impl App {
                         || [
                             record.name.searchable(),
                             record.version.searchable(),
+                            record.available_version.searchable(),
                             record.source.to_lowercase(),
                             record_status_label(&record.status).to_lowercase(),
                             record.identifier.searchable(),
@@ -529,9 +549,13 @@ impl App {
 }
 
 pub fn render(frame: &mut Frame, app: &App) {
-    let detail_height = if app.detail_visible() {
+    let detail_visible = app.detail_visible()
+        || (app.page == AppPage::Inventory
+            && app.inventory_loading
+            && !app.inventory_log.is_empty());
+    let detail_height = if detail_visible {
         if app.page == AppPage::Inventory {
-            11
+            12
         } else {
             5
         }
@@ -647,7 +671,7 @@ pub fn render(frame: &mut Frame, app: &App) {
                 if app.inventory_filter_active {
                     "Ketik filter  Enter selesai  Esc batal  Backspace hapus"
                 } else {
-                    "↑/↓ j/k navigasi  PgUp/PgDn halaman  Enter detail  s/Esc Sources  f filter  r refresh  q keluar"
+                    "↑/↓ j/k navigasi  PgUp/PgDn halaman  Enter detail  u upgrade semua  s/Esc Sources  f filter  r refresh  q keluar"
                 }
             } else {
                 "↑/↓ j/k navigasi  PgUp/PgDn halaman  Enter Inventory  i detail  Tab PATH  p PATH  r refresh  q/Esc keluar"
@@ -778,6 +802,7 @@ fn render_inventory(
         Cell::from("No."),
         Cell::from("Aplikasi"),
         Cell::from("Versi"),
+        Cell::from("Versi Baru"),
         Cell::from("Sumber"),
         Cell::from("Status"),
         Cell::from("Identifier"),
@@ -791,6 +816,7 @@ fn render_inventory(
             Cell::from(""),
             Cell::from("Memuat daftar aplikasi..."),
             Cell::from(""),
+            Cell::from(""),
             Cell::from("LOADING"),
             Cell::from(""),
             Cell::from(""),
@@ -798,6 +824,7 @@ fn render_inventory(
         ])]
     } else if indices.is_empty() {
         vec![Row::new([
+            Cell::from(""),
             Cell::from(""),
             Cell::from(""),
             Cell::from(""),
@@ -817,6 +844,7 @@ fn render_inventory(
                         Cell::from(format!("{:02}", position + 1)),
                         value_cell(&record.name),
                         value_cell(&record.version),
+                        value_cell(&record.available_version),
                         Cell::from(record.source.clone()),
                         Cell::from(record_status_label(&record.status))
                             .style(record_status_style(&record.status)),
@@ -834,6 +862,7 @@ fn render_inventory(
         [
             Constraint::Length(4),
             Constraint::Length(22),
+            Constraint::Length(16),
             Constraint::Length(16),
             Constraint::Length(14),
             Constraint::Length(12),
@@ -882,7 +911,12 @@ fn render_inventory(
     }
 
     let detail = if app.inventory_loading() {
-        "Memuat daftar aplikasi dari setiap source...".into()
+        if app.inventory_log.is_empty() {
+            "Memuat daftar aplikasi dari source terpilih...".into()
+        } else {
+            let start = app.inventory_log.len().saturating_sub(10);
+            app.inventory_log[start..].join("\n")
+        }
     } else {
         app.selected_inventory_index()
             .and_then(|index| app.inventory().get(index))
@@ -901,7 +935,7 @@ fn render_inventory(
     );
 }
 
-const INVENTORY_SCROLL_WIDTH: u16 = 120;
+const INVENTORY_SCROLL_WIDTH: u16 = 136;
 
 fn render_inventory_table(
     frame: &mut Frame,
@@ -1004,11 +1038,13 @@ fn is_valid_cell(value: &CellValue) -> bool {
 
 fn application_detail_line(record: &ApplicationRecord) -> String {
     format!(
-        "{:<15}: {}\n{:<15}: {}\n{:<15}: {}\n{:<15}: {}\n{:<15}: {}\n{:<15}: {}\n{:<15}: {}\n{:<15}: {}\n{:<15}: {}",
+        "{:<15}: {}\n{:<15}: {}\n{:<15}: {}\n{:<15}: {}\n{:<15}: {}\n{:<15}: {}\n{:<15}: {}\n{:<15}: {}\n{:<15}: {}\n{:<15}: {}",
         "Aplikasi",
         record.name.display(),
         "Versi",
         record.version.display(),
+        "Versi Baru",
+        record.available_version.display(),
         "Sumber",
         record.source,
         "Status",

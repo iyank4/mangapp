@@ -30,7 +30,7 @@ cargo build --release
 - `PageUp`/`PageDown` atau `Space`: berpindah halaman.
 - `Home`/`End`: ke awal/akhir.
 - Pada Sources, `Enter`: buka halaman Application Inventory sesuai source yang dipilih; `i`: tampilkan/sembunyikan detail source.
-- Pada Inventory, `Enter`: tampilkan/sembunyikan detail aplikasi; `s` atau `Esc`: kembali ke Sources; `←`/`→` atau `h`/`l`: horizontal scroll.
+- Pada Inventory, `Enter`: tampilkan/sembunyikan detail aplikasi; `u`: upgrade semua aplikasi pada source aktif; `s` atau `Esc`: kembali ke Sources; `←`/`→` atau `h`/`l`: horizontal scroll.
 - `f`: aktifkan filter pada Inventory.
 - `Tab`: berpindah fokus antara section Sources dan PATH; PATH hanya tersedia di halaman Sources.
 - `p`: tampilkan/sembunyikan daftar folder dari `PATH` di bawah Detail dan fokus ke PATH.
@@ -95,7 +95,9 @@ Detector tidak menjalankan shell atau mengevaluasi command sebagai string. Detec
 - [Kontrak Application Inventory](../reference/application-inventory-contract.md)
 - [History: MangApp Sources](../history/2026-09-07-mangapp-sources.md)
 
-Pengambilan inventory berjalan di background setelah aplikasi dibuka dan saat refresh. Halaman Applications menampilkan `LOADING` selama proses, `EMPTY` bila source sukses tetapi tidak mengembalikan record, `UNAVAILABLE` untuk source yang `DISABLED` atau field yang tidak disediakan, dan `ERROR` bila collector gagal.
+Pengambilan inventory berjalan di background hanya setelah user membuka source terpilih atau menekan refresh pada halaman Inventory. Halaman Applications menampilkan `LOADING` selama proses, `EMPTY` bila source sukses tetapi tidak mengembalikan record, `UNAVAILABLE` untuk source yang `DISABLED` atau field yang tidak disediakan, dan `ERROR` bila collector gagal. Kolom `Versi Baru` menjalankan pengecekan native read-only untuk source terpilih setelah inventory terpasang dikumpulkan; `N/A` berarti tidak ada update atau metadata tidak tersedia, sedangkan `UNAVAILABLE` berarti pengecekan gagal atau belum didukung. Saat upgrade berjalan, UI menjadi blocking dan command menggunakan terminal secara langsung agar prompt interaktif dapat dijawab user.
+
+Shortcut `u` menjalankan aturan upgrade native source aktif untuk seluruh aplikasi yang terdeteksi, lalu mengumpulkan ulang inventory source tersebut. Selama proses, alternate screen ditutup sementara dan user perlu menekan Enter untuk kembali ke MangApp setelah command selesai. Source yang mendukung upgrade batch memakai satu command; MAS dan Dart/Flutter menjalankan command per aplikasi agar identifier tiap aplikasi tetap jelas. Go tidak memiliki aturan upgrade universal untuk binary yang terdeteksi.
 
 Status repository saat ini:
 

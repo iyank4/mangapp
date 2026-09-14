@@ -78,6 +78,7 @@ fn app_navigates_enabled_rows_and_handles_actions() {
     assert!(!app.detail_visible());
     assert_eq!(app.handle_key(key(KeyCode::Enter)), AppAction::None);
     assert_eq!(app.page(), mangap::ui::AppPage::Inventory);
+    assert_eq!(app.handle_key(key(KeyCode::Char('u'))), AppAction::Upgrade);
     assert_eq!(app.handle_key(key(KeyCode::Char('r'))), AppAction::Refresh);
     assert_eq!(app.handle_key(key(KeyCode::Char('q'))), AppAction::Quit);
 }
@@ -92,6 +93,29 @@ fn escape_returns_from_inventory_to_sources() {
     assert_eq!(app.page(), mangap::ui::AppPage::Sources);
     assert_eq!(app.focused_section(), SectionFocus::Sources);
     assert_eq!(app.handle_key(key(KeyCode::Esc)), AppAction::Quit);
+}
+
+#[test]
+fn inventory_renders_upgrade_progress_log_while_loading() {
+    let mut app = App::new(snapshots());
+    app.handle_key(key(KeyCode::Enter));
+    app.begin_inventory_loading();
+    app.push_inventory_log("Menjalankan: brew upgrade");
+    app.push_inventory_log("Selesai: brew upgrade");
+
+    let mut terminal = Terminal::new(TestBackend::new(120, 30)).expect("test terminal");
+    terminal
+        .draw(|frame| render(frame, &app))
+        .expect("render upgrade progress");
+    let content: String = terminal
+        .backend()
+        .buffer()
+        .content()
+        .iter()
+        .map(|cell| cell.symbol())
+        .collect();
+    assert!(content.contains("Menjalankan: brew upgrade"));
+    assert!(content.contains("Selesai: brew upgrade"));
 }
 
 #[test]

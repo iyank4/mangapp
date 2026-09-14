@@ -48,6 +48,7 @@ ApplicationRecord {
   source:      StableSourceId,
   name:        CellValue,
   version:     CellValue,
+  available_version: CellValue,
   identifier:  CellValue,
   status:      RecordStatus,
   location:    CellValue,
@@ -63,6 +64,7 @@ ApplicationRecord {
 | `source` | `Sumber` | stable source ID dari registry, misalnya `homebrew`, `cargo`, atau `mas`; tidak boleh kosong | Implemented |
 | `name` | `Aplikasi` | nama aplikasi yang dilaporkan source | Implemented |
 | `version` | `Versi` | nomor versi dan build number yang dilaporkan source; UI tidak mengubah makna semver/non-semver | Implemented |
+| `available_version` | `Versi Baru` | versi terbaru yang tersedia menurut source; gunakan `N/A` bila source belum menyediakan metadata update | Implemented |
 | `identifier` | `Identifier` | nama package/bundle/id source; boleh unavailable | Implemented |
 | `status` | `Status` | status record atau hasil pengambilan data | Implemented |
 | `location` | `Lokasi` | path instalasi bila source menyediakannya | Implemented |
@@ -71,6 +73,8 @@ ApplicationRecord {
 | `note` | panel detail, bukan kolom tabel | alasan status, warning, atau informasi tambahan | Implemented |
 
 Panel detail record menampilkan `Tanggal Install`, `Tanggal Update`, dan `note` bersama informasi lengkap record. Ketiga field tersebut tidak menjadi kolom tabel dan tidak mengubah lebar atau alignment tabel utama.
+
+Pengecekan `Versi Baru` dilakukan setelah daftar aplikasi terpasang berhasil dikumpulkan dan bersifat best-effort serta read-only. Adapter memakai command native masing-masing source, seperti `brew outdated --json=v2`, `mas outdated`, `pip list --outdated --format=json`, `npm outdated --global --json`, `composer global outdated --format=json`, dan mode dry-run pada Conda/Nix/uv. Cargo dan Go melakukan query metadata per package/module. Jika source berhasil diperiksa tetapi tidak memiliki update, cell tetap `N/A`; jika pemeriksaan tidak didukung atau gagal, cell menjadi `UNAVAILABLE`.
 
 ## Nilai kolom Status
 
@@ -118,7 +122,7 @@ Urutan berikut adalah kontrak tetap. Semua source mengisi kolom yang sama; sourc
 Susunan kanonis yang direkomendasikan:
 
 ```text
-No. | Aplikasi | Versi | Sumber | Status | Identifier | Lokasi
+No. | Aplikasi | Versi | Versi Baru | Sumber | Status | Identifier | Lokasi
 ```
 
 Urutan ini memprioritaskan perbandingan yang paling sering dilakukan pengguna di sebelah kiri, lalu provenance dan status, kemudian metadata yang biasanya lebih panjang atau bersifat penjelas di sebelah kanan:
@@ -126,10 +130,11 @@ Urutan ini memprioritaskan perbandingan yang paling sering dilakukan pengguna di
 1. `No.` — nomor visual; bukan bagian dari identitas record.
 2. `Aplikasi` — identitas utama yang dibaca dan dibandingkan pengguna.
 3. `Versi` — diletakkan dekat nama agar perbandingan versi cepat dilakukan.
-4. `Sumber` — provenance, yaitu package manager atau katalog asal record.
-5. `Status` — keadaan record atau collection; diletakkan dekat `Sumber` agar kondisi data cepat dipindai dan token status tetap terlihat tanpa mengandalkan warna.
-6. `Identifier` — nama package, bundle id, app id, atau identifier setara.
-7. `Lokasi` — path instalasi yang dilaporkan source.
+4. `Versi Baru` — versi terbaru yang tersedia menurut source, sehingga update dapat dibandingkan langsung dengan versi terpasang.
+5. `Sumber` — provenance, yaitu package manager atau katalog asal record.
+6. `Status` — keadaan record atau collection; diletakkan dekat `Sumber` agar kondisi data cepat dipindai dan token status tetap terlihat tanpa mengandalkan warna.
+7. `Identifier` — nama package, bundle id, app id, atau identifier setara.
+8. `Lokasi` — path instalasi yang dilaporkan source.
 
 Kolom `Identifier` adalah kolom teknis bersama. Jangan membuat kolom terpisah seperti `Formula`, `Bundle ID`, `Package`, atau `App ID` untuk source tertentu; semua nilai tersebut dipetakan ke `Identifier`. Demikian pula, path instalasi selalu dipetakan ke `Lokasi`. Nomor versi dan build number tetap berada dalam satu kolom `Versi`, misalnya `1.2.3 (Build 456)`. Detail error, warning, dan konteks tambahan ditampilkan pada panel detail, bukan sebagai kolom tabel. Dengan begitu, kemampuan source yang berbeda hanya memengaruhi nilai cell, bukan susunan tabel.
 
@@ -147,10 +152,11 @@ Format tampilan `Tanggal Install` dan `Tanggal Update` pada panel detail adalah 
 | 1 | `No.` | nomor visual 1-based | tetap tampil; tidak berasal dari source |
 | 2 | `Aplikasi` | nama aplikasi | `UNAVAILABLE` bila source tidak dapat menyediakan nama; record tanpa nama tidak boleh tampil sebagai data valid |
 | 3 | `Versi` | nomor versi dan build number yang dilaporkan source | `EMPTY` bila source sukses tetapi tidak melaporkan versi/build; `N/A` bila field tidak berlaku; `UNAVAILABLE` bila collector/source tidak dapat mengambilnya |
-| 4 | `Sumber` | stable source ID dari registry | selalu diisi dari registry; jika source gagal, status ditampilkan di `Status` dan detailnya tersedia pada panel detail |
-| 5 | `Status` | `AVAILABLE`, `EMPTY`, `UNAVAILABLE`, atau `ERROR` | status tidak boleh disamakan dengan isi kosong |
-| 6 | `Identifier` | package name, bundle id, atau identifier setara | `N/A` bila konsep tidak berlaku; `UNAVAILABLE` bila seharusnya ada tetapi gagal dibaca |
-| 7 | `Lokasi` | path instalasi yang dilaporkan source | `N/A`, `UNAVAILABLE`, atau `ERROR` sesuai state data |
+| 4 | `Versi Baru` | versi terbaru yang tersedia menurut source | `N/A` bila source belum menyediakan metadata update; `UNAVAILABLE` bila pemeriksaan seharusnya tersedia tetapi gagal |
+| 5 | `Sumber` | stable source ID dari registry | selalu diisi dari registry; jika source gagal, status ditampilkan di `Status` dan detailnya tersedia pada panel detail |
+| 6 | `Status` | `AVAILABLE`, `EMPTY`, `UNAVAILABLE`, atau `ERROR` | status tidak boleh disamakan dengan isi kosong |
+| 7 | `Identifier` | package name, bundle id, atau identifier setara | `N/A` bila konsep tidak berlaku; `UNAVAILABLE` bila seharusnya ada tetapi gagal dibaca |
+| 8 | `Lokasi` | path instalasi yang dilaporkan source | `N/A`, `UNAVAILABLE`, atau `ERROR` sesuai state data |
 
 Header dan urutan kolom harus sama pada seluruh source dan seluruh refresh. Perbedaan kemampuan source hanya memengaruhi nilai/state cell, bukan struktur tabel.
 
@@ -177,12 +183,12 @@ Aturan tambahan:
 
 ### Terminal lebar
 
-Pada terminal lebar (target minimum 120 kolom), semua tujuh kolom ditampilkan dalam urutan kontrak. Lebar kolom boleh memakai pembagian fixed/weighted, tetapi header dan cell pada row yang sama harus menggunakan definisi lebar yang sama.
+Pada terminal lebar (target minimum 120 kolom), semua delapan kolom ditampilkan dalam urutan kontrak. Lebar kolom boleh memakai pembagian fixed/weighted, tetapi header dan cell pada row yang sama harus menggunakan definisi lebar yang sama.
 
 Prioritas ruang minimum:
 
 1. `No.` dan `Status` selalu terlihat penuh.
-2. `Aplikasi`, `Sumber`, dan `Versi` mendapat ruang utama untuk perbandingan.
+2. `Aplikasi`, `Sumber`, `Versi`, dan `Versi Baru` mendapat ruang utama untuk perbandingan.
 3. `Identifier` dan `Lokasi` boleh dipotong secara visual, tetapi tidak boleh berpindah ke kolom lain.
 
 ### Terminal sempit
@@ -202,7 +208,9 @@ Acceptance test harus memeriksa terminal lebar dan sempit untuk memastikan separ
 
 Application Inventory menggunakan model interaksi yang sama dengan Sources: selection row, panel detail, fokus section, refresh, dan scrolling berbasis viewport.
 
-Pada section Sources, `Enter` membuka halaman Application Inventory yang dibatasi pada source terpilih dan `i` membuka/menutup detail source. Pada section Application Inventory, `Enter` membuka/menutup detail record dan `s` atau `Esc` kembali ke Sources. Panel PATH hanya ditampilkan di Sources. Horizontal scroll Inventory menggunakan `←`/`→` atau `h`/`l`.
+Pada section Sources, `Enter` membuka halaman Application Inventory yang dibatasi pada source terpilih dan `i` membuka/menutup detail source. Pada section Application Inventory, `Enter` membuka/menutup detail record, `u` menjalankan upgrade seluruh aplikasi pada source aktif, dan `s` atau `Esc` kembali ke Sources. Panel PATH hanya ditampilkan di Sources. Horizontal scroll Inventory menggunakan `←`/`→` atau `h`/`l`.
+
+Upgrade berjalan secara blocking di foreground. Saat `u` ditekan, MangApp sementara keluar dari alternate screen dan meneruskan stdin/stdout/stderr langsung ke terminal, sehingga user dapat menjawab prompt password atau konfirmasi dari command upgrade. Setelah selesai, MangApp kembali ke UI dan mengumpulkan ulang inventory untuk source yang sama. Adapter menggunakan aturan native source; command batch dipakai bila tersedia, sedangkan MAS serta Dart/Flutter menjalankan upgrade per identifier aplikasi. Source Go tidak memiliki aturan upgrade universal untuk binary terpasang.
 
 ### Sorting
 
@@ -214,7 +222,7 @@ Pada section Sources, `Enter` membuka halaman Application Inventory yang dibatas
 
 ### Filtering
 
-- Filter adalah pencarian teks case-insensitive terhadap `Aplikasi`, `Versi`, `Sumber`, `Status`, `Identifier`, dan `Lokasi`.
+- Filter adalah pencarian teks case-insensitive terhadap `Aplikasi`, `Versi`, `Versi Baru`, `Sumber`, `Status`, `Identifier`, dan `Lokasi`.
 - Filter tidak mengubah data asli; hanya membatasi row yang ditampilkan.
 - Row yang tidak cocok tidak dihitung dalam `No.` dan tidak dapat dipilih.
 - Jika tidak ada hasil, tabel tetap menampilkan header dan pesan `Tidak ada aplikasi yang cocok dengan filter`.
@@ -252,7 +260,7 @@ Source dengan status `DISABLED` tidak menjalankan command dan tetap menghasilkan
 
 | Requirement issue #1 | Kontrak | Evidence saat ini | Status |
 | --- | --- | --- | --- |
-| Semua source memakai layout kolom yang sama | urutan tujuh kolom tetap | renderer `render_inventory` di `src/ui.rs` dan `inventory_contract.rs` | Implemented |
+| Semua source memakai layout kolom yang sama | urutan delapan kolom tetap | renderer `render_inventory` di `src/ui.rs` dan `inventory_contract.rs` | Implemented |
 | Data unavailable tidak menggeser atau menghilangkan kolom | token/state mengambil lebar cell yang sama | `CellValue`, fixed constraints, dan renderer inventory | Implemented |
 | Unavailable berbeda dari error dan data kosong | state cell eksplisit + token teks + warna | `src/model.rs`, `src/ui.rs`, serta collector error isolation | Implemented |
 | Sorting, filtering, focus, scrolling konsisten | aturan interaksi di dokumen ini | navigasi, filter, refresh preservation, dan scroll inventory di `src/ui.rs` | Implemented |
@@ -267,7 +275,7 @@ Contract test runtime yang tersedia sekarang:
 - merender fixture pada terminal lebar dan sempit, termasuk horizontal scroll;
 - memverifikasi bahwa satu source error tidak menghapus record dari source lain.
 
-Test mengikuti pola renderer Ratatui yang sudah dipakai di `tests/ui_contract.rs`. Pada implementasi terakhir, seluruh suite berisi 32 test dan semuanya lulus.
+Test mengikuti pola renderer Ratatui yang sudah dipakai di `tests/ui_contract.rs`. Pada implementasi terakhir, seluruh suite dijalankan dengan `cargo test --all-targets` dan semuanya lulus.
 
 ## Dependensi, risiko, dan open questions
 
