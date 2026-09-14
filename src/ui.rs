@@ -1,5 +1,6 @@
 use std::{
     cmp::Ordering,
+    collections::HashMap,
     path::{Path, PathBuf},
 };
 
@@ -23,9 +24,25 @@ use crate::registry::source_registry;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AppAction {
     None,
+    CheckSources,
     Refresh,
     Upgrade,
     Quit,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SourceCounts {
+    pub applications: CellValue,
+    pub updates: CellValue,
+}
+
+impl SourceCounts {
+    fn blank() -> Self {
+        Self {
+            applications: CellValue::value(""),
+            updates: CellValue::value(""),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -55,6 +72,9 @@ pub struct App {
     inventory_horizontal_scroll: u16,
     inventory_loading: bool,
     inventory_log: Vec<String>,
+    source_counts: HashMap<String, SourceCounts>,
+    source_checking: bool,
+    source_check_progress: Option<(usize, usize, String)>,
     detail_visible: bool,
     path_visible: bool,
     path_scroll: usize,
@@ -134,6 +154,10 @@ impl App {
             })
             .collect::<Vec<_>>();
         let selected_position = (!selectable_indices.is_empty()).then_some(0);
+        let source_counts = sources
+            .iter()
+            .map(|snapshot| (snapshot.definition.id.to_owned(), SourceCounts::blank()))
+            .collect();
 
         Self {
             sources,
@@ -149,6 +173,9 @@ impl App {
             inventory_horizontal_scroll: 0,
             inventory_loading: false,
             inventory_log: Vec::new(),
+            source_counts,
+            source_checking: false,
+            source_check_progress: None,
             detail_visible: false,
             path_visible: false,
             path_scroll: 0,
@@ -240,6 +267,9 @@ impl App {
         let inventory_source_filter = self.inventory_source_filter.clone();
         let inventory_filter = self.inventory_filter.clone();
         let inventory_horizontal_scroll = self.inventory_horizontal_scroll;
+        let source_counts = self.source_counts.clone();
+        let source_checking = self.source_checking;
+        let source_check_progress = self.source_check_progress.clone();
         let selected_record_key = self
             .selected_inventory_index()
             .and_then(|index| self.inventory.get(index))
@@ -258,6 +288,9 @@ impl App {
         self.inventory_horizontal_scroll = inventory_horizontal_scroll;
         self.inventory_loading = false;
         self.inventory_log.clear();
+        self.source_counts = source_counts;
+        self.source_checking = source_checking;
+        self.source_check_progress = source_check_progress;
         self.inventory_selected_position = selected_record_key
             .and_then(|key| {
                 self.filtered_inventory_indices()
@@ -285,9 +318,79 @@ impl App {
         }
     }
 
+    pub fn begin_source_check(&mut self, total: usize) {
+        self.source_counts
+            .values_mut()
+            .for_each(|counts| *counts = SourceCounts::blank());
+        self.source_checking = true;
+        self.source_check_progress = Some((0, total, "Menyiapkan pemeriksaan...".into()));
+        self.detail_visible = false;
+    }
+
+    pub fn source_check_started(
+        &mut self,
+        current: usize,
+        total: usize,
+        source_name: impl Into<String>,
+    ) {
+        self.source_check_progress = Some((current, total, source_name.into()));
+    }
+
+    pub fn apply_source_check_result(
+        &mut self,
+        source_id: &str,
+        applications: CellValue,
+        updates: CellValue,
+    ) {
+        self.source_counts.insert(
+            source_id.to_owned(),
+            SourceCounts {
+                applications,
+                updates,
+            },
+        );
+    }
+
+    pub fn finish_source_check(&mut self) {
+        self.source_checking = false;
+        if let Some((_, total, _)) = &self.source_check_progress {
+            self.source_check_progress =
+                Some((*total, *total, "Selesai memeriksa semua source.".into()));
+        }
+    }
+
+    pub fn reset_source_check(&mut self) {
+        self.source_counts
+            .values_mut()
+            .for_each(|counts| *counts = SourceCounts::blank());
+        self.source_checking = false;
+        self.source_check_progress = None;
+    }
+
+    pub fn source_checking(&self) -> bool {
+        self.source_checking
+    }
+
+    pub fn source_check_progress(&self) -> Option<(usize, usize, &str)> {
+        self.source_check_progress
+            .as_ref()
+            .map(|(current, total, source)| (*current, *total, source.as_str()))
+    }
+
+    pub fn source_counts(&self, source_id: &str) -> SourceCounts {
+        self.source_counts
+            .get(source_id)
+            .cloned()
+            .unwrap_or_else(SourceCounts::blank)
+    }
+
     pub fn handle_key(&mut self, key: KeyEvent) -> AppAction {
         if self.inventory_filter_active {
             return self.handle_filter_key(key);
+        }
+
+        if self.source_checking {
+            return AppAction::None;
         }
 
         match key.code {
@@ -299,6 +402,12 @@ impl App {
             }
             KeyCode::Char('q') | KeyCode::Char('Q') | KeyCode::Esc => AppAction::Quit,
             KeyCode::Char('r') | KeyCode::Char('R') => AppAction::Refresh,
+            KeyCode::Char('c') | KeyCode::Char('C')
+                if self.page == AppPage::Sources
+                    && self.focused_section == SectionFocus::Sources =>
+            {
+                AppAction::CheckSources
+            }
             KeyCode::Char('u') | KeyCode::Char('U')
                 if self.page == AppPage::Inventory && !self.inventory_loading =>
             {
@@ -550,6 +659,7 @@ impl App {
 
 pub fn render(frame: &mut Frame, app: &App) {
     let detail_visible = app.detail_visible()
+        || (app.page == AppPage::Sources && app.source_checking())
         || (app.page == AppPage::Inventory
             && app.inventory_loading
             && !app.inventory_log.is_empty());
@@ -674,7 +784,7 @@ pub fn render(frame: &mut Frame, app: &App) {
                     "↑/↓ j/k navigasi  PgUp/PgDn halaman  Enter detail  u upgrade semua  s/Esc Sources  f filter  r refresh  q keluar"
                 }
             } else {
-                "↑/↓ j/k navigasi  PgUp/PgDn halaman  Enter Inventory  i detail  Tab PATH  p PATH  r refresh  q/Esc keluar"
+                "↑/↓ j/k navigasi  PgUp/PgDn halaman  Enter Inventory  i detail  c check semua  Tab PATH  p PATH  r refresh  q/Esc keluar"
             },
         ),
         areas[4],
@@ -702,6 +812,8 @@ fn render_sources(
         Cell::from("Status"),
         Cell::from("Sumber"),
         Cell::from("Command"),
+        Cell::from("Aplikasi"),
+        Cell::from("Perlu Update"),
         Cell::from("Kategori"),
         Cell::from("Keterangan"),
     ])
@@ -711,11 +823,14 @@ fn render_sources(
         let status = status_label(&snapshot.status);
         let candidates = snapshot.definition.candidates.join(" / ");
         let note = status_note(&snapshot.status);
+        let counts = app.source_counts(snapshot.definition.id);
         Row::new([
             Cell::from(format!("{:02}", index + 1)),
             Cell::from(status),
             Cell::from(snapshot.definition.name),
             Cell::from(candidates),
+            value_cell(&counts.applications),
+            value_cell(&counts.updates),
             Cell::from(snapshot.definition.category),
             Cell::from(note),
         ])
@@ -727,10 +842,12 @@ fn render_sources(
         [
             Constraint::Length(4),
             Constraint::Length(10),
-            Constraint::Length(18),
+            Constraint::Length(17),
+            Constraint::Length(20),
+            Constraint::Length(12),
+            Constraint::Length(14),
             Constraint::Length(24),
-            Constraint::Length(28),
-            Constraint::Min(20),
+            Constraint::Min(18),
         ],
     )
     .header(header)
@@ -752,13 +869,23 @@ fn render_sources(
     table_state.select(app.selected_index());
     frame.render_stateful_widget(table, table_area, &mut table_state);
 
-    let detail = app
-        .selected_index()
-        .and_then(|index| app.sources().get(index))
-        .map(detail_line)
-        .unwrap_or_else(|| {
-            "Sumber disabled tetap ditampilkan sebagai dukungan yang tersedia di MangApp.".into()
-        });
+    let detail = if let Some((current, total, source)) = app.source_check_progress()
+        && app.source_checking()
+    {
+        if current == 0 {
+            format!("Checking source 0/{total}\nMenyiapkan pemeriksaan...")
+        } else {
+            format!("Checking source {current}/{total}\nSumber: {source}")
+        }
+    } else {
+        app.selected_index()
+            .and_then(|index| app.sources().get(index))
+            .map(detail_line)
+            .unwrap_or_else(|| {
+                "Sumber disabled tetap ditampilkan sebagai dukungan yang tersedia di MangApp."
+                    .into()
+            })
+    };
     frame.render_widget(
         Paragraph::new(detail).block(Block::default().borders(Borders::ALL).title(" Detail ")),
         detail_area,

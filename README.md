@@ -20,9 +20,9 @@
 
 Semua source yang didukung selalu ditampilkan. Source yang command-nya tidak tersedia di sistem tetap terlihat sebagai `DISABLED`, sehingga user dapat membedakan antara source yang tidak terpasang dan source yang tidak didukung.
 
-Kontrak layout dan data untuk Application Inventory tersedia di [Kontrak Application Inventory](docs/reference/application-inventory-contract.md). Dari Sources, tekan `Enter` untuk membuka Inventory sesuai source yang dipilih atau `i` untuk menampilkan detail source; gunakan `f` untuk filter, `u` untuk meng-upgrade semua aplikasi pada source aktif, dan `s` atau `Esc` untuk kembali ke Sources.
+Kontrak layout dan data untuk Application Inventory tersedia di [Kontrak Application Inventory](docs/reference/application-inventory-contract.md). Dari Sources, tekan `Enter` untuk membuka Inventory sesuai source yang dipilih, `i` untuk menampilkan detail source, atau `c` untuk memeriksa semua source secara bertahap; gunakan `f` untuk filter, `u` untuk meng-upgrade semua aplikasi pada source aktif, dan `s` atau `Esc` untuk kembali ke Sources.
 
-Tabel Sources memiliki kolom `No.` untuk nomor urut visual. Sumber yang enabled ditampilkan lebih dulu, lalu sumber `DISABLED`; masing-masing kelompok tetap diurutkan secara alfabetis.
+Tabel Sources memiliki kolom `No.` untuk nomor urut visual, `Aplikasi` untuk jumlah aplikasi terdeteksi, dan `Perlu Update` untuk jumlah aplikasi yang memiliki versi baru. Kedua kolom jumlah kosong sampai shortcut `c` dijalankan. Pemeriksaan hanya dilakukan untuk source `AVAILABLE`, berjalan satu per satu, dan hasil tiap source langsung ditampilkan. Sumber yang enabled ditampilkan lebih dulu, lalu sumber `DISABLED`; masing-masing kelompok tetap diurutkan secara alfabetis.
 
 Halaman Applications menampilkan status `UNAVAILABLE` untuk source yang `DISABLED`, sehingga source yang belum terpasang tetap dapat ditinjau tanpa menggagalkan inventory source lain. Saat pengambilan inventory berlangsung, halaman menampilkan state `LOADING`; jika tidak ada hasil, tabel menampilkan empty state yang jelas.
 

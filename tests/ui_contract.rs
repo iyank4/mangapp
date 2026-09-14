@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use mangap::model::{SourceSnapshot, SourceStatus};
+use mangap::model::{CellValue, SourceSnapshot, SourceStatus};
 use mangap::registry::source_registry;
 use mangap::ui::{App, AppAction, SectionFocus, render};
 use ratatui::{
@@ -76,11 +76,57 @@ fn app_navigates_enabled_rows_and_handles_actions() {
     assert!(app.detail_visible());
     assert_eq!(app.handle_key(key(KeyCode::Char('i'))), AppAction::None);
     assert!(!app.detail_visible());
+    assert_eq!(
+        app.handle_key(key(KeyCode::Char('c'))),
+        AppAction::CheckSources
+    );
     assert_eq!(app.handle_key(key(KeyCode::Enter)), AppAction::None);
     assert_eq!(app.page(), mangap::ui::AppPage::Inventory);
     assert_eq!(app.handle_key(key(KeyCode::Char('u'))), AppAction::Upgrade);
     assert_eq!(app.handle_key(key(KeyCode::Char('r'))), AppAction::Refresh);
     assert_eq!(app.handle_key(key(KeyCode::Char('q'))), AppAction::Quit);
+}
+
+#[test]
+fn source_check_starts_blank_and_updates_each_source_result() {
+    let mut app = App::new(snapshots());
+    let initial = app.source_counts("cargo");
+    assert_eq!(initial.applications.display(), "");
+    assert_eq!(initial.updates.display(), "");
+
+    app.begin_source_check(app.sources().len());
+    app.source_check_started(2, app.sources().len(), "Homebrew");
+    assert_eq!(
+        app.source_check_progress(),
+        Some((2, app.sources().len(), "Homebrew"))
+    );
+    app.apply_source_check_result("homebrew", CellValue::value("12"), CellValue::value("3"));
+
+    let counts = app.source_counts("homebrew");
+    assert_eq!(counts.applications.display(), "12");
+    assert_eq!(counts.updates.display(), "3");
+}
+
+#[test]
+fn sources_page_renders_source_check_progress_in_detail() {
+    let mut app = App::new(snapshots());
+    app.begin_source_check(app.sources().len());
+    app.source_check_started(3, app.sources().len(), "Python pip");
+
+    let mut terminal = Terminal::new(TestBackend::new(140, 30)).expect("test terminal");
+    terminal
+        .draw(|frame| render(frame, &app))
+        .expect("render source check");
+    let content: String = terminal
+        .backend()
+        .buffer()
+        .content()
+        .iter()
+        .map(|cell| cell.symbol())
+        .collect();
+
+    assert!(content.contains("Checking source 3/17"));
+    assert!(content.contains("Sumber: Python pip"));
 }
 
 #[test]
@@ -189,6 +235,8 @@ fn sources_page_renders_headers_rows_and_disabled_status() {
     assert!(content.contains("Status"));
     assert!(content.contains("Sumber"));
     assert!(content.contains("Command"));
+    assert!(content.contains("Aplikasi"));
+    assert!(content.contains("Perlu Update"));
     assert!(content.contains("Kategori"));
     assert!(content.contains("Keterangan"));
     assert!(content.contains("Cargo"));
