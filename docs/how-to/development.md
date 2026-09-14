@@ -32,7 +32,7 @@ cargo build --release
 - Pada Sources, `Enter`: buka halaman Application Inventory sesuai source yang dipilih; `i`: tampilkan/sembunyikan detail source.
 - Pada Inventory, `Enter`: tampilkan/sembunyikan detail aplikasi; `s` atau `Esc`: kembali ke Sources; `←`/`→` atau `h`/`l`: horizontal scroll.
 - `f`: aktifkan filter pada Inventory.
-- `Tab`: berpindah fokus antara section Sources dan PATH.
+- `Tab`: berpindah fokus antara section Sources dan PATH; PATH hanya tersedia di halaman Sources.
 - `p`: tampilkan/sembunyikan daftar folder dari `PATH` di bawah Detail dan fokus ke PATH.
 - `↑`/`↓` atau `j`/`k`: scroll daftar folder `PATH` saat fokus berada di section PATH.
 - `r`: deteksi ulang sumber dan mengambil ulang inventory aplikasi.

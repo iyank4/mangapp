@@ -190,9 +190,62 @@ fn inventory_page_renders_fixed_columns_and_detail_fields() {
         assert!(content.contains(header), "missing header: {header}");
     }
     assert!(content.contains("Source: Cargo"));
+    assert!(content.contains("Aplikasi       : Ripgrep"));
+    assert!(content.contains("Versi          : 1.2.3 (Build 4)"));
+    assert!(content.contains("Sumber         : cargo"));
+    assert!(content.contains("Status         : AVAILABLE"));
     assert!(content.contains("Tanggal Install: 2026-01-02"));
-    assert!(content.contains("Tanggal Update: 2026-02-03"));
-    assert!(content.contains("Note: metadata dari fixture"));
+    assert!(content.contains("Tanggal Update : 2026-02-03"));
+    assert!(content.contains("Note           : metadata dari fixture"));
+}
+
+#[test]
+fn inventory_page_does_not_render_path_section() {
+    let mut app = App::with_path_entries_and_inventory(
+        vec![available(&source_registry()[0])],
+        vec![record("cargo", "Ripgrep", "ripgrep")],
+        vec![PathBuf::from("/path/entry")],
+    );
+    app.handle_key(key(KeyCode::Char('p')));
+    app.handle_key(key(KeyCode::Tab));
+    app.handle_key(key(KeyCode::Enter));
+
+    let mut terminal = Terminal::new(TestBackend::new(140, 30)).expect("test terminal");
+    terminal
+        .draw(|frame| render(frame, &app))
+        .expect("render inventory without path");
+    let content: String = terminal
+        .backend()
+        .buffer()
+        .content()
+        .iter()
+        .map(|cell| cell.symbol())
+        .collect();
+
+    assert!(content.contains("MangApp — Application Inventory"));
+    assert!(!content.contains("PATH directories"));
+    assert!(!content.contains("PATH"));
+    assert!(!content.contains("/path/entry"));
+}
+
+#[test]
+fn inventory_empty_state_spans_the_table_width() {
+    let mut app = App::with_inventory(vec![available(&source_registry()[0])], Vec::new());
+    app.handle_key(key(KeyCode::Enter));
+
+    let mut terminal = Terminal::new(TestBackend::new(140, 30)).expect("test terminal");
+    terminal
+        .draw(|frame| render(frame, &app))
+        .expect("render empty inventory");
+    let content: String = terminal
+        .backend()
+        .buffer()
+        .content()
+        .iter()
+        .map(|cell| cell.symbol())
+        .collect();
+
+    assert!(content.contains("Belum ada aplikasi yang terdeteksi"));
 }
 
 #[test]

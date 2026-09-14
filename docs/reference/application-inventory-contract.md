@@ -202,7 +202,7 @@ Acceptance test harus memeriksa terminal lebar dan sempit untuk memastikan separ
 
 Application Inventory menggunakan model interaksi yang sama dengan Sources: selection row, panel detail, fokus section, refresh, dan scrolling berbasis viewport.
 
-Pada section Sources, `Enter` membuka halaman Application Inventory yang dibatasi pada source terpilih dan `i` membuka/menutup detail source. Pada section Application Inventory, `Enter` membuka/menutup detail record dan `s` atau `Esc` kembali ke Sources. Horizontal scroll Inventory menggunakan `←`/`→` atau `h`/`l`.
+Pada section Sources, `Enter` membuka halaman Application Inventory yang dibatasi pada source terpilih dan `i` membuka/menutup detail source. Pada section Application Inventory, `Enter` membuka/menutup detail record dan `s` atau `Esc` kembali ke Sources. Panel PATH hanya ditampilkan di Sources. Horizontal scroll Inventory menggunakan `←`/`→` atau `h`/`l`.
 
 ### Sorting
 

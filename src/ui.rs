@@ -7,7 +7,7 @@ use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     Frame,
     buffer::Buffer,
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout, Margin, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Cell, Paragraph, Row, StatefulWidget, Table, TableState},
@@ -325,10 +325,7 @@ impl App {
                         self.path_visible = true;
                         SectionFocus::Path
                     }
-                    SectionFocus::Inventory => {
-                        self.path_visible = true;
-                        SectionFocus::Path
-                    }
+                    SectionFocus::Inventory => SectionFocus::Inventory,
                     SectionFocus::Path => SectionFocus::Sources,
                 };
                 if self.focused_section == SectionFocus::Sources {
@@ -336,7 +333,7 @@ impl App {
                 }
                 AppAction::None
             }
-            KeyCode::Char('p') | KeyCode::Char('P') => {
+            KeyCode::Char('p') | KeyCode::Char('P') if self.page == AppPage::Sources => {
                 self.path_visible = !self.path_visible;
                 if self.path_visible {
                     self.focused_section = SectionFocus::Path;
@@ -533,16 +530,25 @@ impl App {
 
 pub fn render(frame: &mut Frame, app: &App) {
     let detail_height = if app.detail_visible() {
-        if app.page == AppPage::Inventory { 7 } else { 5 }
+        if app.page == AppPage::Inventory {
+            11
+        } else {
+            5
+        }
     } else {
         3
     };
-    let path_height = path_panel_height(
-        frame.area().height,
-        detail_height,
-        app.path_entries().len(),
-        app.path_visible(),
-    );
+    let path_visible = app.page == AppPage::Sources && app.path_visible();
+    let path_height = if app.page == AppPage::Inventory {
+        0
+    } else {
+        path_panel_height(
+            frame.area().height,
+            detail_height,
+            app.path_entries().len(),
+            path_visible,
+        )
+    };
     let areas = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -559,7 +565,7 @@ pub fn render(frame: &mut Frame, app: &App) {
         AppPage::Inventory => render_inventory(frame, app, areas[0], areas[1], areas[2]),
     }
 
-    if app.path_visible() {
+    if path_visible {
         let rows = if app.path_entries().is_empty() {
             vec![Row::new([
                 Cell::from(""),
@@ -627,7 +633,7 @@ pub fn render(frame: &mut Frame, app: &App) {
         .row_highlight_style(Style::default().add_modifier(Modifier::REVERSED))
         .highlight_symbol("› ");
         frame.render_stateful_widget(path_table, areas[3], &mut path_state);
-    } else {
+    } else if app.page == AppPage::Sources {
         frame.render_widget(
             Paragraph::new("PATH directories: hidden (p untuk tampilkan)")
                 .style(Style::default().fg(Color::DarkGray)),
@@ -641,7 +647,7 @@ pub fn render(frame: &mut Frame, app: &App) {
                 if app.inventory_filter_active {
                     "Ketik filter  Enter selesai  Esc batal  Backspace hapus"
                 } else {
-                    "↑/↓ j/k navigasi  PgUp/PgDn halaman  Enter detail  s/Esc Sources  f filter  Tab PATH  r refresh  q keluar"
+                    "↑/↓ j/k navigasi  PgUp/PgDn halaman  Enter detail  s/Esc Sources  f filter  r refresh  q keluar"
                 }
             } else {
                 "↑/↓ j/k navigasi  PgUp/PgDn halaman  Enter Inventory  i detail  Tab PATH  p PATH  r refresh  q/Esc keluar"
@@ -793,11 +799,7 @@ fn render_inventory(
     } else if indices.is_empty() {
         vec![Row::new([
             Cell::from(""),
-            Cell::from(if app.inventory().is_empty() {
-                "Belum ada aplikasi yang terdeteksi"
-            } else {
-                "Tidak ada aplikasi yang cocok dengan filter"
-            }),
+            Cell::from(""),
             Cell::from(""),
             Cell::from(""),
             Cell::from(""),
@@ -865,6 +867,19 @@ fn render_inventory(
         &mut table_state,
         app.inventory_horizontal_scroll(),
     );
+
+    if !app.inventory_loading() && indices.is_empty() {
+        let message = if app.inventory().is_empty() {
+            "Belum ada aplikasi yang terdeteksi"
+        } else {
+            "Tidak ada aplikasi yang cocok dengan filter"
+        };
+        let inner = table_area.inner(Margin::new(1, 1));
+        if inner.height > 1 {
+            let empty_state_area = Rect::new(inner.x, inner.y.saturating_add(1), inner.width, 1);
+            frame.render_widget(Paragraph::new(message), empty_state_area);
+        }
+    }
 
     let detail = if app.inventory_loading() {
         "Memuat daftar aplikasi dari setiap source...".into()
@@ -989,14 +1004,24 @@ fn is_valid_cell(value: &CellValue) -> bool {
 
 fn application_detail_line(record: &ApplicationRecord) -> String {
     format!(
-        "{} · {} · {}\nIdentifier: {}  |  Lokasi: {}\nTanggal Install: {}  |  Tanggal Update: {}\nNote: {}",
+        "{:<15}: {}\n{:<15}: {}\n{:<15}: {}\n{:<15}: {}\n{:<15}: {}\n{:<15}: {}\n{:<15}: {}\n{:<15}: {}\n{:<15}: {}",
+        "Aplikasi",
         record.name.display(),
+        "Versi",
+        record.version.display(),
+        "Sumber",
         record.source,
+        "Status",
         record_status_label(&record.status),
+        "Identifier",
         record.identifier.display(),
+        "Lokasi",
         record.location.display(),
+        "Tanggal Install",
         record.installed_at.display(),
+        "Tanggal Update",
         record.updated_at.display(),
+        "Note",
         record.note.display(),
     )
 }
