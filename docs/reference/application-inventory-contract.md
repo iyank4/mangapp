@@ -2,7 +2,7 @@
 
 **Issue:** [#1 — Define unified application table across sources](https://github.com/iyank4/mangapp/issues/1)
 
-**Status:** `Documented Only`
+**Status:** `Implemented`
 
 **Tanggal:** 2026-09-07
 
@@ -12,7 +12,7 @@
 
 Menetapkan kontrak source-agnostic untuk tabel Application Inventory agar aplikasi yang dikumpulkan dari semua source dapat dibandingkan dengan kolom, arti data, status, dan perilaku interaksi yang konsisten.
 
-Dokumen ini adalah acuan desain dan implementasi berikutnya. Collector aplikasi, halaman inventory, dan perubahan kode belum termasuk hasil issue ini.
+Dokumen ini adalah acuan desain dan implementasi runtime. Collector awal, halaman inventory, dan contract test untuk perilaku utamanya sudah tersedia di repository.
 
 ## Scope
 
@@ -27,11 +27,9 @@ Dokumen ini adalah acuan desain dan implementasi berikutnya. Collector aplikasi,
 
 ### Out of Scope
 
-- Menjalankan command collector atau membaca daftar aplikasi dari source.
-- Menentukan parser/version resolver untuk source tertentu.
 - Menyimpan data secara persisten.
 - Menggabungkan atau menghapus duplikat lintas source secara otomatis.
-- Mengubah perilaku halaman Sources yang sudah diimplementasikan.
+- Mengubah perilaku halaman Sources yang sudah diimplementasikan, selain navigasi ke halaman Inventory.
 
 ## Istilah dan identitas baris
 
@@ -61,16 +59,16 @@ ApplicationRecord {
 
 | Field | Tampil sebagai | Aturan | Status |
 | --- | --- | --- | --- |
-| `record_key` | tidak ditampilkan; dipakai untuk selection/refresh | stabil dalam satu hasil collection; dibentuk dari `source` + identifier, atau fallback deterministik saat identifier unavailable | Planned |
-| `source` | `Sumber` | stable source ID dari registry, misalnya `homebrew`, `cargo`, atau `mas`; tidak boleh kosong | Planned |
-| `name` | `Aplikasi` | nama aplikasi yang dilaporkan source | Planned |
-| `version` | `Versi` | nomor versi dan build number yang dilaporkan source; UI tidak mengubah makna semver/non-semver | Planned |
-| `identifier` | `Identifier` | nama package/bundle/id source; boleh unavailable | Planned |
-| `status` | `Status` | status record atau hasil pengambilan data | Planned |
-| `location` | `Lokasi` | path instalasi bila source menyediakannya | Planned |
-| `installed_at` | panel detail, bukan kolom tabel | tanggal instalasi yang dilaporkan source | Planned |
-| `updated_at` | panel detail, bukan kolom tabel | tanggal terakhir aplikasi diperbarui menurut source | Planned |
-| `note` | panel detail, bukan kolom tabel | alasan status, warning, atau informasi tambahan | Planned |
+| `record_key` | tidak ditampilkan; dipakai untuk selection/refresh | stabil dalam satu hasil collection; dibentuk dari `source` + identifier, atau fallback deterministik saat identifier unavailable | Implemented |
+| `source` | `Sumber` | stable source ID dari registry, misalnya `homebrew`, `cargo`, atau `mas`; tidak boleh kosong | Implemented |
+| `name` | `Aplikasi` | nama aplikasi yang dilaporkan source | Implemented |
+| `version` | `Versi` | nomor versi dan build number yang dilaporkan source; UI tidak mengubah makna semver/non-semver | Implemented |
+| `identifier` | `Identifier` | nama package/bundle/id source; boleh unavailable | Implemented |
+| `status` | `Status` | status record atau hasil pengambilan data | Implemented |
+| `location` | `Lokasi` | path instalasi bila source menyediakannya | Implemented |
+| `installed_at` | panel detail, bukan kolom tabel | tanggal instalasi yang dilaporkan source | Implemented |
+| `updated_at` | panel detail, bukan kolom tabel | tanggal terakhir aplikasi diperbarui menurut source | Implemented |
+| `note` | panel detail, bukan kolom tabel | alasan status, warning, atau informasi tambahan | Implemented |
 
 Panel detail record menampilkan `Tanggal Install`, `Tanggal Update`, dan `note` bersama informasi lengkap record. Ketiga field tersebut tidak menjadi kolom tabel dan tidak mengubah lebar atau alignment tabel utama.
 
@@ -250,37 +248,37 @@ Error pada satu source tidak boleh menghilangkan record/source lain. Detail erro
 
 | Requirement issue #1 | Kontrak | Evidence saat ini | Status |
 | --- | --- | --- | --- |
-| Semua source memakai layout kolom yang sama | urutan tujuh kolom tetap | `src/ui.rs` saat ini baru memiliki tabel Sources; inventory belum ada | Planned / Gap |
-| Data unavailable tidak menggeser atau menghilangkan kolom | token/state mengambil lebar cell yang sama | belum ada renderer inventory | Planned / Gap |
-| Unavailable berbeda dari error dan data kosong | state cell eksplisit + token teks + warna | `SourceStatus` membedakan status Sources di `src/model.rs`; state inventory belum ada | Partially Implemented |
-| Sorting, filtering, focus, scrolling konsisten | aturan interaksi di dokumen ini | navigasi/focus/scroll Sources ada di `src/ui.rs`; filter inventory belum ada | Partially Implemented |
-| Alignment diuji pada terminal lebar dan sempit | contract test untuk dua ukuran viewport | test UI Sources tersedia di `tests/ui_contract.rs`; test inventory belum ada | Planned / Gap |
+| Semua source memakai layout kolom yang sama | urutan tujuh kolom tetap | renderer `render_inventory` di `src/ui.rs` dan `inventory_contract.rs` | Implemented |
+| Data unavailable tidak menggeser atau menghilangkan kolom | token/state mengambil lebar cell yang sama | `CellValue`, fixed constraints, dan renderer inventory | Implemented |
+| Unavailable berbeda dari error dan data kosong | state cell eksplisit + token teks + warna | `src/model.rs`, `src/ui.rs`, serta collector error isolation | Implemented |
+| Sorting, filtering, focus, scrolling konsisten | aturan interaksi di dokumen ini | navigasi, filter, refresh preservation, dan scroll inventory di `src/ui.rs` | Implemented |
+| Alignment diuji pada terminal lebar dan sempit | contract test untuk dua ukuran viewport | `tests/inventory_contract.rs` menguji viewport 140 dan 80 kolom | Implemented |
 
 ## Test obligations
 
-Implementasi berikutnya wajib menambahkan contract test yang:
+Contract test runtime yang tersedia sekarang:
 
-- merender minimal dua source dengan field yang berbeda-beda dan memverifikasi header/column order identik;
-- merender `EMPTY`, `UNAVAILABLE`, `N/A`, dan `ERROR`, lalu memverifikasi token dan style state masing-masing;
-- merender fixture yang sama pada terminal lebar dan sempit dan memverifikasi separator/header/cell tetap berada pada batas kolom yang sama;
-- memverifikasi sorting default, tie-breaker, dan posisi nilai unavailable/error;
-- memverifikasi filter, empty-state, row numbering, selection, detail, refresh, dan vertical/horizontal scroll;
-- memverifikasi bahwa satu source error tidak menghapus row dari source lain.
+- memverifikasi normalisasi record dan `record_key` berbasis stable source;
+- memverifikasi fixture lintas source, filter, sorting, row numbering, selection, detail, dan refresh preservation;
+- merender fixture pada terminal lebar dan sempit, termasuk horizontal scroll;
+- memverifikasi bahwa satu source error tidak menghapus record dari source lain.
 
-Test yang direncanakan mengikuti pola test renderer Ratatui yang sudah dipakai di `tests/ui_contract.rs`. Karena issue ini hanya menghasilkan dokumentasi, belum ada hasil test baru yang dapat diklaim.
+Test mengikuti pola renderer Ratatui yang sudah dipakai di `tests/ui_contract.rs`. Pada implementasi terakhir, seluruh suite berisi 32 test dan semuanya lulus.
 
 ## Dependensi, risiko, dan open questions
 
-- Collector setiap source perlu menyepakati pemetaan nama, versi, identifier, dan location sebelum kontrak dapat diberi status `Implemented`.
+- Collector source tertentu masih dapat diperluas untuk memperkaya `Lokasi`, `Tanggal Install`, dan `Tanggal Update`; field tersebut sudah memiliki state runtime yang aman bila data belum disediakan.
 - Perbandingan versi lintas ecosystem belum memiliki aturan universal; implementasi awal boleh memakai natural-text ordering dan harus mencatat batasannya.
 - Kunci filter dan toggle sort harus diselaraskan dengan halaman Sources ketika fitur filter ditambahkan ke Sources; saat ini Sources belum memiliki filter.
-- Horizontal scroll menambah state UI yang belum dimiliki `App`; detail implementasinya harus tetap terpisah dari vertical scroll.
+- Horizontal scroll inventory memiliki state terpisah dari vertical scroll dan aktif saat lebar terminal lebih kecil dari viewport tabel.
 - Keputusan deduplikasi lintas source masih terbuka; kontrak saat ini mempertahankan satu row per `source + identifier`.
 
 ## Evidence repository
 
-- `src/model.rs` — status source yang sudah ada (`AVAILABLE`, `DISABLED`, `ERROR`).
+- `src/model.rs` — model source dan application record, termasuk cell state serta status record.
+- `src/inventory.rs` — collector runtime dan parser awal per source dengan error isolation.
 - `src/registry.rs` — registry source dan source id stabil.
-- `src/ui.rs` — pola layout tabel, detail, selection, focus, dan scrolling halaman Sources.
+- `src/ui.rs` — layout Sources dan Inventory, fixed columns, detail, selection, filter, focus, dan horizontal/vertical scrolling.
+- `tests/inventory_contract.rs` — contract test collector dan perilaku Inventory pada viewport lebar dan sempit.
 - `tests/ui_contract.rs` — bukti test renderer dan interaksi UI yang sudah ada.
 - `README.md` — status fitur publik dan scope halaman Sources.

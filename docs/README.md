@@ -4,7 +4,7 @@ Dokumentasi MangApp dikelompokkan berdasarkan tujuan dan statusnya.
 
 ## Referensi
 
-- [Kontrak Application Inventory](reference/application-inventory-contract.md) — kontrak layout dan data yang direncanakan untuk issue #1 (`Documented Only`).
+- [Kontrak Application Inventory](reference/application-inventory-contract.md) — kontrak layout, data, dan runtime issue #1 (`Implemented`).
 
 ## Panduan
 

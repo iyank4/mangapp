@@ -30,6 +30,8 @@ cargo build --release
 - `PageUp`/`PageDown` atau `Space`: berpindah halaman.
 - `Home`/`End`: ke awal/akhir.
 - `Enter`: tampilkan/sembunyikan detail.
+- `i`: buka halaman Application Inventory; `s`: kembali ke Sources.
+- `f`: aktifkan filter pada Inventory; `←`/`→` atau `h`/`l`: horizontal scroll Inventory pada terminal sempit.
 - `Tab`: berpindah fokus antara section Sources dan PATH.
 - `p`: tampilkan/sembunyikan daftar folder dari `PATH` di bawah Detail dan fokus ke PATH.
 - `↑`/`↓` atau `j`/`k`: scroll daftar folder `PATH` saat fokus berada di section PATH.
@@ -45,7 +47,8 @@ Section `PATH directories` berada di bawah Detail, default hidden, dan mempertah
 | `src/model.rs` | Tipe data source dan status deteksi. |
 | `src/registry.rs` | Katalog source yang didukung dalam urutan alfabetis. |
 | `src/detect.rs` | Resolver command pada `PATH` dan inferensi source hint untuk entry PATH. |
-| `src/ui.rs` | State aplikasi, layout tabel, warna, detail, dan navigasi. |
+| `src/inventory.rs` | Collector dan parser runtime untuk daftar aplikasi per source. |
+| `src/ui.rs` | State aplikasi, layout tabel, warna, detail, filter, scroll, dan navigasi. |
 | `src/main.rs` | Lifecycle terminal dan event loop. |
 | `tests/` | Test kontrak model, registry, detector, UI, dan binary. |
 
@@ -99,9 +102,9 @@ Status repository saat ini:
 | Halaman Sources untuk source yang didukung | Implemented |
 | Status `AVAILABLE`, `ERROR`, dan `DISABLED` | Implemented |
 | Panel PATH, source hint, warning duplicate, dan error missing path | Implemented |
-| Kontrak/layout Application Inventory | Documented Only |
+| Application Inventory lintas source | Implemented |
 
-Backlog aktif dikelola melalui [GitHub Issues](https://github.com/iyank4/mangapp/issues). Kontrak Application Inventory di atas mendokumentasikan target issue #1; collector dan halaman inventory belum diimplementasikan.
+Backlog aktif dikelola melalui [GitHub Issues](https://github.com/iyank4/mangapp/issues). Kontrak Application Inventory di atas menjadi acuan runtime untuk issue #1.
 
 ## Prinsip perubahan
 

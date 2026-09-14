@@ -16,11 +16,11 @@
 | Pengurutan source enabled sebelum `DISABLED` | Implemented |
 | Panel PATH dengan urutan resolve sistem | Implemented |
 | Source hint, duplicate warning, dan missing-path error | Implemented |
-| Kontrak/layout Application Inventory | Documented Only |
+| Application Inventory lintas source | Implemented |
 
 Semua source yang didukung selalu ditampilkan. Source yang command-nya tidak tersedia di sistem tetap terlihat sebagai `DISABLED`, sehingga user dapat membedakan antara source yang tidak terpasang dan source yang tidak didukung.
 
-Kontrak layout dan data untuk Application Inventory tersedia di [Kontrak Application Inventory](docs/reference/application-inventory-contract.md). Kontrak ini belum menjadi fitur runtime.
+Kontrak layout dan data untuk Application Inventory tersedia di [Kontrak Application Inventory](docs/reference/application-inventory-contract.md). Halaman Inventory dapat dibuka dengan `i`; gunakan `f` untuk filter dan `s` untuk kembali ke Sources.
 
 Tabel Sources memiliki kolom `No.` untuk nomor urut visual. Sumber yang enabled ditampilkan lebih dulu, lalu sumber `DISABLED`; masing-masing kelompok tetap diurutkan secara alfabetis.
 
